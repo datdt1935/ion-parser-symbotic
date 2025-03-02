@@ -12,6 +12,7 @@ import { JsonViewer } from "@/components/json-viewer"
 import { useDispatch, useSelector } from "@/store/store"
 import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { RosoutAggViewer } from "@/components/rosout-agg-viewer"
 
 export default function IonLogViewer() {
   const dispatch = useDispatch()
@@ -129,6 +130,7 @@ export default function IonLogViewer() {
             <TabsList>
               <TabsTrigger value="info">Information</TabsTrigger>
               <TabsTrigger value="topics">Topics</TabsTrigger>
+              <TabsTrigger value="rosout">Rosout</TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="space-y-4">
@@ -147,6 +149,10 @@ export default function IonLogViewer() {
 
             <TabsContent value="topics">
               <TopicViewer />
+            </TabsContent>
+
+            <TabsContent value="rosout">
+              <RosoutAggViewer />
             </TabsContent>
           </Tabs>
         )}

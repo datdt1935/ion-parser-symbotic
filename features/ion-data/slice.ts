@@ -14,6 +14,10 @@ export interface IonDataState {
   }
   selectedTopic: string | null
   currentMessageIndex: number
+  playback: {
+    isPlaying: boolean
+    speed: number // messages per second
+  }
 }
 
 interface SetDataPayload {
@@ -35,6 +39,10 @@ export const initialState: IonDataState = {
   },
   selectedTopic: null,
   currentMessageIndex: 0,
+  playback: {
+    isPlaying: false,
+    speed: 1, // Default speed: 1 message per second
+  },
 }
 
 // Helper function to extract topics from raw data
@@ -89,6 +97,15 @@ const selectCurrentTopicAllMessages = createSelector(
 
 const selectTotalMessages = createSelector([selectCurrentTopicAllMessages], (messages) => messages.length)
 
+// Add playback selectors
+const selectPlaybackState = (state: RootState) => state.ionData.playback
+
+const selectRosoutMessages = createSelector(selectTopics, (topics) => {
+  const rosoutTopic = topics.find((t) => t.topicName === "/rosout_agg")
+  if (!rosoutTopic) return []
+  return rosoutTopic.messages || []
+})
+
 // Slice
 const ionDataSlice = createSlice({
   name: "ionData",
@@ -122,6 +139,12 @@ const ionDataSlice = createSlice({
     setCurrentMessageIndex(state, action: PayloadAction<number>) {
       state.currentMessageIndex = action.payload
     },
+    setPlaybackState(state, action: PayloadAction<{ isPlaying: boolean }>) {
+      state.playback.isPlaying = action.payload.isPlaying
+    },
+    setPlaybackSpeed(state, action: PayloadAction<number>) {
+      state.playback.speed = action.payload
+    },
   },
 })
 
@@ -137,9 +160,10 @@ export const ionDataSelectors = {
   selectCurrentTopicAllMessages,
   selectTotalMessages,
   selectSelectedTopic,
+  selectPlaybackState,
+  selectRosoutMessages,
 }
 
-// Export actions and reducer
 export const ionDataActions = ionDataSlice.actions
 export const ionDataReducer = ionDataSlice.reducer
 

@@ -1,11 +1,14 @@
 "use client"
 
+import { useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { JsonViewer } from "./json-viewer"
 import { useDispatch, useSelector } from "@/store/store"
 import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
 import { Slider } from "@/components/ui/slider"
+import { Button } from "@/components/ui/button"
+import { Play, Pause } from "lucide-react"
 import type { RootState } from "@/store/store"
 
 export function TopicViewer() {
@@ -16,6 +19,7 @@ export function TopicViewer() {
   const currentMessageIndex = useSelector((state: RootState) => state.ionData.currentMessageIndex)
   const allMessages = useSelector(ionDataSelectors.selectCurrentTopicAllMessages)
   const totalMessages = useSelector(ionDataSelectors.selectTotalMessages)
+  const playbackState = useSelector(ionDataSelectors.selectPlaybackState)
 
   const handleTopicSelect = (topic: string) => {
     dispatch(ionDataActions.setSelectedTopic(topic))
@@ -24,6 +28,21 @@ export function TopicViewer() {
   const handleSliderChange = (value: number[]) => {
     dispatch(ionDataActions.setCurrentMessageIndex(value[0]))
   }
+
+  const togglePlayback = () => {
+    dispatch(ionDataActions.setPlaybackState({ isPlaying: !playbackState.isPlaying }))
+  }
+
+  // Playback effect
+  useEffect(() => {
+    if (!playbackState.isPlaying || !allMessages.length) return
+
+    const interval = setInterval(() => {
+      dispatch(ionDataActions.setCurrentMessageIndex((currentMessageIndex + 1) % allMessages.length))
+    }, 1000 / playbackState.speed)
+
+    return () => clearInterval(interval)
+  }, [playbackState.isPlaying, playbackState.speed, currentMessageIndex, allMessages.length, dispatch])
 
   if (topicNames.length === 0) {
     return (
@@ -69,21 +88,23 @@ export function TopicViewer() {
               </div>
             </div>
 
-            <div className="mb-6">
-              <Slider
-                value={[currentMessageIndex]}
-                max={Math.max(0, totalMessages - 1)}
-                step={1}
-                onValueChange={handleSliderChange}
-                className="my-4"
-              />
+            <div className="mb-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <Button variant="outline" size="icon" onClick={togglePlayback} className="w-10 h-10">
+                  {playbackState.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </Button>
+                <div className="flex-1">
+                  <Slider
+                    value={[currentMessageIndex]}
+                    max={Math.max(0, totalMessages - 1)}
+                    step={1}
+                    onValueChange={handleSliderChange}
+                  />
+                </div>
+              </div>
             </div>
 
-            <JsonViewer
-              data={allMessages[currentMessageIndex] || {}}
-              isExpanded={true}
-              enableSearch={false} // Enable search for topic messages
-            />
+            <JsonViewer data={allMessages[currentMessageIndex] || {}} isExpanded={true} enableSearch={false} />
           </CardContent>
         </Card>
       ) : selectedTopic ? (
