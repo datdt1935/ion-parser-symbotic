@@ -13,6 +13,7 @@ import { useDispatch, useSelector } from "@/store/store"
 import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RosoutAggViewer } from "@/components/rosout-agg-viewer"
+import { BotModelInfo } from "./bot-model-info"
 
 export default function IonLogViewer() {
   const dispatch = useDispatch()
@@ -138,6 +139,8 @@ export default function IonLogViewer() {
                 <SessionInfo data={ionData.raw} />
                 <RobotInfo data={ionData.raw} />
               </div>
+
+              <BotModelInfo data={ionData.raw} />
 
               <Card>
                 <CardContent className="pt-6">
