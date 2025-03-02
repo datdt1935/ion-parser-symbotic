@@ -1,5 +1,13 @@
 import type { ParsedIonData } from "@/app/types"
 
+export interface TopicMessage {
+  topicName: string
+  topicType: string
+  timestamp: number
+  messages: any[]
+  frequency?: number
+}
+
 export interface IonDataState {
   isLoading: number
   data: ParsedIonData | null
@@ -7,6 +15,14 @@ export interface IonDataState {
   filters: {
     page: number
     limit: number
+  }
+  playback: {
+    selectedTopic: string | null
+    isPlaying: boolean
+    currentTime: number
+    startTime: number
+    endTime: number
+    playbackSpeed: number
   }
 }
 

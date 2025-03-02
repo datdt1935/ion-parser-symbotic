@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { JsonViewer } from "@/components/json-viewer"
+import { formatDateTime } from "@/lib/utils/date"
 
 interface SessionInfoProps {
-  data?: any // Changed to accept any to handle raw data
+  data?: any
 }
 
 export function SessionInfo({ data }: SessionInfoProps) {
@@ -13,7 +14,23 @@ export function SessionInfo({ data }: SessionInfoProps) {
     // Find the first object that has metadata.sessionInfo
     const sessionData = rawData.find((item) => item?.metadata?.sessionInfo)
 
-    return sessionData?.metadata?.sessionInfo || null
+    if (!sessionData?.metadata?.sessionInfo) return null
+
+    const info = sessionData.metadata.sessionInfo
+
+    // Format any date fields in ISO 8601
+    const formattedInfo = {
+      ...info,
+      startTime: info.startTime ? formatDateTime(info.startTime) : undefined,
+      endTime: info.endTime ? formatDateTime(info.endTime) : undefined,
+      timestamp: info.timestamp ? formatDateTime(info.timestamp) : undefined,
+      // Add any other date fields that need formatting
+    }
+
+    // Remove undefined values
+    Object.keys(formattedInfo).forEach((key) => formattedInfo[key] === undefined && delete formattedInfo[key])
+
+    return formattedInfo
   }
 
   const sessionInfo = getSessionInfo(data)
