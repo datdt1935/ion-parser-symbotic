@@ -2,6 +2,7 @@ import type React from "react"
 import { Providers } from "./providers"
 import "./globals.css"
 import type { Metadata } from "next"
+import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
   title: "ION Parser",
@@ -17,6 +18,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>{children}</Providers>
+        <Toaster />
       </body>
     </html>
   )
