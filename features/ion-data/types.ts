@@ -16,14 +16,8 @@ export interface IonDataState {
     page: number
     limit: number
   }
-  playback: {
-    selectedTopic: string | null
-    isPlaying: boolean
-    currentTime: number
-    startTime: number
-    endTime: number
-    playbackSpeed: number
-  }
+  selectedTopic: string | null
+  currentMessageIndex: number
 }
 
 export interface SetDataPayload {

@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction, createSelector } from "@reduxjs/toolkit"
 import type { ParsedIonData } from "@/app/types"
 import type { RootState } from "@/store/reducer"
+import type { TopicMessage } from "./types"
 
 // Types
 export interface IonDataState {
@@ -11,13 +12,15 @@ export interface IonDataState {
     page: number
     limit: number
   }
+  selectedTopic: string | null
+  currentMessageIndex: number
 }
 
-export interface SetDataPayload {
+interface SetDataPayload {
   data: ParsedIonData
 }
 
-export interface SetErrorPayload {
+interface SetErrorPayload {
   error: string
 }
 
@@ -30,34 +33,64 @@ export const initialState: IonDataState = {
     page: 1,
     limit: 10,
   },
+  selectedTopic: null,
+  currentMessageIndex: 0,
 }
 
-// Selectors
-export const selectors = {
-  selectIonData: (state: RootState) => state.ionData.data,
-  selectIsLoading: (state: RootState) => state.ionData.isLoading > 0,
-  selectError: (state: RootState) => state.ionData.error,
-  selectFilters: (state: RootState) => state.ionData.filters,
+// Helper function to extract topics from raw data
+const extractTopics = (rawData: any[]): TopicMessage[] => {
+  const topics: TopicMessage[] = []
 
-  selectSessionInfo: createSelector(
-    (state: RootState) => state.ionData.data?.raw,
-    (raw) => {
-      if (!raw) return null
-      return raw.find((item) => item?.metadata?.sessionInfo)?.metadata?.sessionInfo || null
-    },
-  ),
+  rawData.forEach((item) => {
+    if (item?.topics && Array.isArray(item.topics)) {
+      item.topics.forEach((topic: any) => {
+        if (topic.topicName && topic.topicType) {
+          topics.push({
+            topicName: topic.topicName,
+            topicType: topic.topicType,
+            timestamp: topic.timestamp || 0,
+            messages: topic.messages || [],
+            frequency: topic.frequency,
+          })
+        }
+      })
+    }
+  })
 
-  selectBotConfig: createSelector(
-    (state: RootState) => state.ionData.data?.raw,
-    (raw) => {
-      if (!raw) return null
-      return raw.find((item) => item?.metadata?.botConfig)?.metadata?.botConfig || null
-    },
-  ),
+  return topics
 }
+
+// Base selectors
+const selectIonData = (state: RootState) => state.ionData.data
+const selectRawData = (state: RootState) => state.ionData.data?.raw
+const selectIsLoading = (state: RootState) => state.ionData.isLoading > 0
+const selectError = (state: RootState) => state.ionData.error
+const selectFilters = (state: RootState) => state.ionData.filters
+const selectSelectedTopic = (state: RootState) => state.ionData.selectedTopic
+
+// Derived selectors
+const selectTopics = createSelector(selectRawData, (raw) => (raw ? extractTopics(raw) : []))
+
+const selectTopicNames = createSelector(selectTopics, (topics) => [...new Set(topics.map((t) => t.topicName))])
+
+const selectCurrentTopicMessage = createSelector([selectTopics, selectSelectedTopic], (topics, selectedTopic) => {
+  if (!selectedTopic) return null
+
+  const topicMessages = topics.filter((t) => t.topicName === selectedTopic)
+  if (!topicMessages.length) return null
+
+  return topicMessages[0]
+})
+
+const selectCurrentTopicAllMessages = createSelector(
+  [selectCurrentTopicMessage],
+  (currentTopic) => currentTopic?.messages || [],
+)
+
+const selectTotalMessages = createSelector([selectCurrentTopicAllMessages], (messages) => messages.length)
 
 // Slice
-const slice = createSlice({
+const ionDataSlice = createSlice({
   name: "ionData",
   initialState,
   reducers: {
@@ -70,6 +103,8 @@ const slice = createSlice({
     setData(state, action: PayloadAction<SetDataPayload>) {
       state.data = action.payload.data
       state.error = null
+      state.selectedTopic = null
+      state.currentMessageIndex = 0
     },
     setError(state, action: PayloadAction<SetErrorPayload>) {
       state.error = action.payload.error
@@ -78,17 +113,33 @@ const slice = createSlice({
       state.filters = { ...state.filters, ...action.payload }
     },
     clearData(state) {
-      state.data = null
-      state.error = null
-      state.isLoading = 0
+      return initialState
+    },
+    setSelectedTopic(state, action: PayloadAction<string | null>) {
+      state.selectedTopic = action.payload
+      state.currentMessageIndex = 0 // Reset index when changing topics
+    },
+    setCurrentMessageIndex(state, action: PayloadAction<number>) {
+      state.currentMessageIndex = action.payload
     },
   },
 })
 
-export const { actions } = slice
+// Export selectors
+export const ionDataSelectors = {
+  selectIonData,
+  selectIsLoading,
+  selectError,
+  selectFilters,
+  selectTopics,
+  selectTopicNames,
+  selectCurrentTopicMessage,
+  selectCurrentTopicAllMessages,
+  selectTotalMessages,
+  selectSelectedTopic,
+}
 
-// For external use
-export const ionDataSelectors = selectors
-export const ionDataActions = { ...actions }
-export const ionDataReducer = slice.reducer
+// Export actions and reducer
+export const ionDataActions = ionDataSlice.actions
+export const ionDataReducer = ionDataSlice.reducer
 

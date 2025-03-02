@@ -37,7 +37,11 @@ export function RobotInfo({ data }: RobotInfoProps) {
         <CardTitle>Robot Information</CardTitle>
       </CardHeader>
       <CardContent>
-        <JsonViewer data={robotInfo} />
+        <JsonViewer
+          data={robotInfo}
+          isExpanded={true}
+          enableSearch={false} // Disable search for robot info
+        />
       </CardContent>
     </Card>
   )

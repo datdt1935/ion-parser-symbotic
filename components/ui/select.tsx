@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as SelectPrimitive from "@radix-ui/react-select"
-import { Check, ChevronDown, Search } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import * as SelectPrimitive from "@radix-ui/react-select";
+import { Check, ChevronDown, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const Select = SelectPrimitive.Root
-const SelectGroup = SelectPrimitive.Group
-const SelectValue = SelectPrimitive.Value
+const Select = SelectPrimitive.Root;
+const SelectGroup = SelectPrimitive.Group;
+const SelectValue = SelectPrimitive.Value;
 
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
@@ -17,7 +17,7 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-      className,
+      className
     )}
     {...props}
   >
@@ -26,8 +26,8 @@ const SelectTrigger = React.forwardRef<
       <ChevronDown className="h-4 w-4 opacity-50" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
-))
-SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+));
+SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
 
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
@@ -37,7 +37,7 @@ const SelectItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-      className,
+      className
     )}
     {...props}
   >
@@ -48,39 +48,45 @@ const SelectItem = React.forwardRef<
     </span>
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
-))
-SelectItem.displayName = SelectPrimitive.Item.displayName
+));
+SelectItem.displayName = SelectPrimitive.Item.displayName;
 
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", ...props }, ref) => {
-  const [search, setSearch] = React.useState("")
-  
+  const [search, setSearch] = React.useState("");
+
   const filteredChildren = React.useMemo(() => {
     return React.Children.toArray(children)
       .map((child) => {
-        if (!React.isValidElement(child)) return child
+        if (!React.isValidElement(child)) return child;
 
         if (child.type === SelectGroup) {
-          const filteredItems = React.Children.toArray(child.props.children).filter((subChild) => {
-            if (!React.isValidElement(subChild) || subChild.type !== SelectItem) return true
-            const itemText = subChild.props.children?.toString().toLowerCase() || ""
-            return itemText.includes(search.toLowerCase())
-          })
+          const filteredItems = React.Children.toArray(
+            child.props.children
+          ).filter((subChild) => {
+            if (!React.isValidElement(subChild) || subChild.type !== SelectItem)
+              return true;
+            const itemText =
+              subChild.props.children?.toString().toLowerCase() || "";
+            return itemText.includes(search.toLowerCase());
+          });
 
-          return filteredItems.length > 0 ? React.cloneElement(child, { children: filteredItems }) : null
+          return filteredItems.length > 0
+            ? React.cloneElement(child, { children: filteredItems })
+            : null;
         }
 
         if (child.type === SelectItem) {
-          const itemText = child.props.children?.toString().toLowerCase() || ""
-          return itemText.includes(search.toLowerCase()) ? child : null
+          const itemText = child.props.children?.toString().toLowerCase() || "";
+          return itemText.includes(search.toLowerCase()) ? child : null;
         }
 
-        return child
+        return child;
       })
-      .filter(Boolean)
-  }, [children, search])
+      .filter(Boolean);
+  }, [children, search]);
 
   return (
     <SelectPrimitive.Portal>
@@ -88,7 +94,7 @@ const SelectContent = React.forwardRef<
         ref={ref}
         className={cn(
           "relative z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
-          className,
+          className
         )}
         position={position}
         {...props}
@@ -108,30 +114,48 @@ const SelectContent = React.forwardRef<
           {filteredChildren.length > 0 ? (
             filteredChildren
           ) : (
-            <div className="py-6 text-center text-sm text-muted-foreground">No results found for "{search}"</div>
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              No results found for "{search}"
+            </div>
           )}
         </SelectPrimitive.Viewport>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
-  )
-})
-SelectContent.displayName = SelectPrimitive.Content.displayName
+  );
+});
+SelectContent.displayName = SelectPrimitive.Content.displayName;
 
 const SelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.Label ref={ref} className={cn("py-1.5 pl-8 pr-2 text-sm font-semibold", className)} {...props} />
-))
-SelectLabel.displayName = SelectPrimitive.Label.displayName
+  <SelectPrimitive.Label
+    ref={ref}
+    className={cn("py-1.5 pl-8 pr-2 text-sm font-semibold", className)}
+    {...props}
+  />
+));
+SelectLabel.displayName = SelectPrimitive.Label.displayName;
 
 const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.Separator ref={ref} className={cn("-mx-1 my-1 h-px bg-muted", className)} {...props} />
-))
-SelectSeparator.displayName = SelectPrimitive.Separator.displayName
+  <SelectPrimitive.Separator
+    ref={ref}
+    className={cn("-mx-1 my-1 h-px bg-muted", className)}
+    {...props}
+  />
+));
+SelectSeparator.displayName = SelectPrimitive.Separator.displayName;
 
-export { Select, SelectGroup, SelectValue, SelectTrigger, SelectContent, SelectLabel, SelectItem, SelectSeparator }
-
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+};
