@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RosoutAggViewer } from "@/components/rosout-agg-viewer"
 import { BotModelInfo } from "./bot-model-info"
 import { Playback3DViewer } from "@/components/playback-3d-viewer"
+import { OhmniCleanViewer } from "@/components/ohmni-clean-viewer"
 
 export default function IonLogViewer() {
   const dispatch = useDispatch()
@@ -61,6 +62,8 @@ export default function IonLogViewer() {
       dispatch(ionDataActions.popLoading())
     }
   }
+
+  const availableImageTopic = useSelector(ionDataSelectors.selectAvailableImageTopic)
 
   return (
     <div className="min-h-screen bg-background">
@@ -134,6 +137,7 @@ export default function IonLogViewer() {
               <TabsTrigger value="topics">Topics</TabsTrigger>
               <TabsTrigger value="rosout">Rosout</TabsTrigger>
               <TabsTrigger value="3d">Playback 3D</TabsTrigger>
+              {availableImageTopic && <TabsTrigger value="ohmni">OhmniClean log</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="info" className="space-y-4">
@@ -167,6 +171,12 @@ export default function IonLogViewer() {
             <TabsContent value="3d">
               <Playback3DViewer />
             </TabsContent>
+
+            {availableImageTopic && (
+              <TabsContent value="ohmni">
+                <OhmniCleanViewer />
+              </TabsContent>
+            )}
           </Tabs>
         )}
       </main>

@@ -18,6 +18,7 @@ export interface IonDataState {
     isPlaying: boolean
     speed: number // messages per second
   }
+  availableImageTopic: string | null // Add this line
 }
 
 interface SetDataPayload {
@@ -43,6 +44,7 @@ export const initialState: IonDataState = {
     isPlaying: false,
     speed: 1, // Default speed: 1 message per second
   },
+  availableImageTopic: null, // Add this line
 }
 
 // Helper function to extract topics from raw data
@@ -75,6 +77,7 @@ const selectIsLoading = (state: RootState) => state.ionData.isLoading > 0
 const selectError = (state: RootState) => state.ionData.error
 const selectFilters = (state: RootState) => state.ionData.filters
 const selectSelectedTopic = (state: RootState) => state.ionData.selectedTopic
+const selectAvailableImageTopic = (state: RootState) => state.ionData.availableImageTopic
 
 // Derived selectors
 const selectTopics = createSelector(selectRawData, (raw) => (raw ? extractTopics(raw) : []))
@@ -127,6 +130,13 @@ const ionDataSlice = createSlice({
       state.error = null
       state.selectedTopic = null
       state.currentMessageIndex = 0
+
+      // Check for available image topic when data is loaded
+      const topics = extractTopics(action.payload.data.raw || [])
+      state.availableImageTopic =
+        topics
+          .map((t) => t.topicName)
+          .find((topic) => topic.toLowerCase().includes("/image_raw/compressed_throttle")) || null
     },
     setError(state, action: PayloadAction<SetErrorPayload>) {
       state.error = action.payload.error
@@ -135,7 +145,10 @@ const ionDataSlice = createSlice({
       state.filters = { ...state.filters, ...action.payload }
     },
     clearData(state) {
-      return initialState
+      return {
+        ...initialState,
+        availableImageTopic: null, // Make sure to clear this too
+      }
     },
     setSelectedTopic(state, action: PayloadAction<string | null>) {
       state.selectedTopic = action.payload
@@ -168,6 +181,7 @@ export const ionDataSelectors = {
   selectPlaybackState,
   selectRosoutMessages,
   selectBotModelInfo,
+  selectAvailableImageTopic,
 }
 
 export const ionDataActions = ionDataSlice.actions
