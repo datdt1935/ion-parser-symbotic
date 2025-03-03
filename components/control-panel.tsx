@@ -1,182 +1,116 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCcw, RotateCw } from "lucide-react"
-import type { PlaybackSceneHandle } from "@/app/scene/playback-scene"
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, RotateCw, Eye, EyeOff,Keyboard,KeyboardOff } from "lucide-react"
+import { usePlaybackScene } from "@/app/scene/playback-scene-context"
 
 interface ControlPanelProps {
-  sceneRef: React.RefObject<PlaybackSceneHandle>
+  isVisible: boolean
+  onToggleVisibility: () => void
 }
 
-export function ControlPanel({ sceneRef }: ControlPanelProps) {
-  const [position, setPosition] = useState({
-    x: 0,
-    y: 0,
-    z: 0,
-  })
+const MOVEMENT_SPEED = 0.1
+const ROTATION_SPEED = 0.1
 
-  const [rotation, setRotation] = useState({
-    x: 0,
-    y: 0,
-    z: 0,
-  })
+export function ControlPanel({ isVisible, onToggleVisibility }: ControlPanelProps) {
+  const { transform, moveForward, moveBackward, moveLeft, moveRight, rotateLeft, rotateRight } = usePlaybackScene()
 
-  const handlePositionChange = (axis: "x" | "y" | "z", value: string) => {
-    const numValue = Number.parseFloat(value) || 0
-    setPosition((prev) => ({
-      ...prev,
-      [axis]: numValue,
-    }))
-  }
-
-  const handleRotationChange = (axis: "x" | "y" | "z", value: string) => {
-    const numValue = Number.parseFloat(value) || 0
-    setRotation((prev) => ({
-      ...prev,
-      [axis]: numValue,
-    }))
-  }
-
-  const handleSetPosition = () => {
-    if (sceneRef.current) {
-      sceneRef.current.setPosition(position.x, position.y, position.z)
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key.toLowerCase()) {
+        case "w":
+          moveForward(MOVEMENT_SPEED)
+          break
+        case "s":
+          moveBackward(MOVEMENT_SPEED)
+          break
+        case "a":
+          moveLeft(MOVEMENT_SPEED)
+          break
+        case "d":
+          moveRight(MOVEMENT_SPEED)
+          break
+        case "q":
+          rotateLeft(ROTATION_SPEED)
+          break
+        case "e":
+          rotateRight(ROTATION_SPEED)
+          break
+      }
     }
-  }
 
-  const handleSetRotation = () => {
-    if (sceneRef.current) {
-      sceneRef.current.setRotation(rotation.x, rotation.y, rotation.z)
-    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [moveForward, moveBackward, moveLeft, moveRight, rotateLeft, rotateRight])
+
+  if (!isVisible) {
+    return (
+      <Button variant="outline" size="icon" className="absolute bottom-4 right-4 z-10" onClick={onToggleVisibility}>
+        <Keyboard className="h-4 w-4" />
+      </Button>
+    )
   }
 
   return (
-    <Card className="absolute bottom-4 right-4 p-4 bg-background/80 backdrop-blur-sm">
-      {/* Movement Controls */}
+    <Card className="absolute bottom-4 right-4 p-4 w-64 space-y-4 bg-background/95 backdrop-blur z-10">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium">Controls</h3>
+        <Button variant="ghost" size="icon" onClick={onToggleVisibility}>
+          <KeyboardOff className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="space-y-2 text-xs">
+        <div className="grid grid-cols-2 gap-2">
+          <div>Position:</div>
+          <div>
+            X: {transform.position.x.toFixed(2)}
+            Y: {transform.position.y.toFixed(2)}
+            Z: {transform.position.z.toFixed(2)}
+          </div>
+          <div>Rotation:</div>
+          <div>
+            X: {transform.rotation.x.toFixed(2)}
+            Y: {transform.rotation.y.toFixed(2)}
+            Z: {transform.rotation.z.toFixed(2)}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-3 gap-2">
-        <Button variant="outline" size="icon" className="w-10 h-10" onClick={() => sceneRef.current?.rotateLeft()}>
+        <div />
+        <Button variant="outline" size="icon" onClick={() => moveForward(MOVEMENT_SPEED)}>
+          <ChevronUp className="h-4 w-4" />
+        </Button>
+        <div />
+        <Button variant="outline" size="icon" onClick={() => moveLeft(MOVEMENT_SPEED)}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" onClick={() => moveBackward(MOVEMENT_SPEED)}>
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" onClick={() => moveRight(MOVEMENT_SPEED)}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="flex justify-center gap-2">
+        <Button variant="outline" size="icon" onClick={() => rotateLeft(ROTATION_SPEED)}>
           <RotateCcw className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="w-10 h-10" onClick={() => sceneRef.current?.moveForward()}>
-          <ArrowUp className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" className="w-10 h-10" onClick={() => sceneRef.current?.rotateRight()}>
+        <Button variant="outline" size="icon" onClick={() => rotateRight(ROTATION_SPEED)}>
           <RotateCw className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="w-10 h-10" onClick={() => sceneRef.current?.moveLeft()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" className="w-10 h-10" onClick={() => sceneRef.current?.moveBackward()}>
-          <ArrowDown className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" className="w-10 h-10" onClick={() => sceneRef.current?.moveRight()}>
-          <ArrowRight className="h-4 w-4" />
-        </Button>
       </div>
 
-      <Separator className="my-4" />
-
-      {/* Position Controls */}
-      <div className="space-y-4">
-        <div>
-          <Label className="text-xs font-semibold">Position</Label>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            <div className="space-y-1">
-              <Label htmlFor="position-x" className="text-xs">
-                X
-              </Label>
-              <Input
-                id="position-x"
-                type="number"
-                value={position.x}
-                onChange={(e) => handlePositionChange("x", e.target.value)}
-                className="h-8"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="position-y" className="text-xs">
-                Y
-              </Label>
-              <Input
-                id="position-y"
-                type="number"
-                value={position.y}
-                onChange={(e) => handlePositionChange("y", e.target.value)}
-                className="h-8"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="position-z" className="text-xs">
-                Z
-              </Label>
-              <Input
-                id="position-z"
-                type="number"
-                value={position.z}
-                onChange={(e) => handlePositionChange("z", e.target.value)}
-                className="h-8"
-              />
-            </div>
-          </div>
-          <Button variant="secondary" size="sm" className="w-full mt-2" onClick={handleSetPosition}>
-            Set Position
-          </Button>
-        </div>
-
-        {/* Rotation Controls */}
-        <div>
-          <Label className="text-xs font-semibold">Rotation (degrees)</Label>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            <div className="space-y-1">
-              <Label htmlFor="rotation-x" className="text-xs">
-                X
-              </Label>
-              <Input
-                id="rotation-x"
-                type="number"
-                value={rotation.x}
-                onChange={(e) => handleRotationChange("x", e.target.value)}
-                className="h-8"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="rotation-y" className="text-xs">
-                Y
-              </Label>
-              <Input
-                id="rotation-y"
-                type="number"
-                value={rotation.y}
-                onChange={(e) => handleRotationChange("y", e.target.value)}
-                className="h-8"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="rotation-z" className="text-xs">
-                Z
-              </Label>
-              <Input
-                id="rotation-z"
-                type="number"
-                value={rotation.z}
-                onChange={(e) => handleRotationChange("z", e.target.value)}
-                className="h-8"
-              />
-            </div>
-          </div>
-          <Button variant="secondary" size="sm" className="w-full mt-2" onClick={handleSetRotation}>
-            Set Rotation
-          </Button>
-        </div>
+      <div className="text-xs text-muted-foreground">
+        <div>Keyboard Controls:</div>
+        <div>W,A,S,D - Move</div>
+        <div>Q,E - Rotate</div>
       </div>
-
-      <div className="mt-4 text-xs text-center text-muted-foreground">Keyboard: WASD, Q/E for rotation</div>
     </Card>
   )
 }

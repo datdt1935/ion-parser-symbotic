@@ -1,50 +1,51 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { useSelector } from "@/store/store"
 import { ionDataSelectors } from "@/features/ion-data/slice"
 import { useModelConverter } from "@/app/hooks/use-model-converter"
-import { Loader2 } from "lucide-react"
-import { PlaybackScene, type PlaybackSceneHandle, type SceneStats } from "@/app/scene/playback-scene"
+import { Loader2, EyeIcon as Eye3d, View } from "lucide-react" // Add Eye3d and View icons
+import { PlaybackScene } from "@/app/scene/playback-scene"
+import { PlaybackSceneProvider, usePlaybackScene } from "@/app/scene/playback-scene-context"
 import { ControlPanel } from "./control-panel"
+import { TransformForm } from "./transform-form"
+import { DebugInfo } from "./debug-info"
+import { WheelOdomViewer } from "./wheel-odom-viewer"
+import { Button } from "@/components/ui/button"
+
+// Update the ViewModeToggle button text to reflect the new default state
+function ViewModeToggle() {
+  const { viewMode, setViewMode } = usePlaybackScene()
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="absolute top-4 right-4 z-10"
+      onClick={() => {
+        setViewMode(viewMode === "orbit" ? "third-person" : "orbit")
+      }}
+    >
+      {viewMode === "orbit" ? (
+        <>
+          <Eye3d className="h-4 w-4 mr-2" />
+          Third Person
+        </>
+      ) : (
+        <>
+          <View className="h-4 w-4 mr-2" />
+          Orbit View
+        </>
+      )}
+    </Button>
+  )
+}
 
 export function Playback3DViewer() {
-  const sceneRef = useRef<PlaybackSceneHandle>(null)
-  const [sceneStats, setSceneStats] = useState<SceneStats | null>(null)
+  const [isControlsVisible, setIsControlsVisible] = useState(false)
   const botModelInfo = useSelector(ionDataSelectors.selectBotModelInfo)
   const { objContent, isConverting, error } = useModelConverter(botModelInfo)
-
-  // Handle keyboard controls
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!sceneRef.current) return
-
-      switch (event.key.toLowerCase()) {
-        case "w":
-          sceneRef.current.moveForward()
-          break
-        case "s":
-          sceneRef.current.moveBackward()
-          break
-        case "a":
-          sceneRef.current.moveLeft()
-          break
-        case "d":
-          sceneRef.current.moveRight()
-          break
-        case "q":
-          sceneRef.current.rotateLeft()
-          break
-        case "e":
-          sceneRef.current.rotateRight()
-          break
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [])
 
   if (!botModelInfo) {
     return (
@@ -69,59 +70,36 @@ export function Playback3DViewer() {
   }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="aspect-[16/9] w-full border rounded-lg overflow-hidden bg-muted relative">
-            {isConverting ? (
-              <div className="w-full h-full flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <>
-                <PlaybackScene
-                  ref={sceneRef}
-                  model={{ objContent, isConverting }}
-                  className="w-full h-full"
-                  onStatsUpdate={setSceneStats}
-                />
-                <ControlPanel sceneRef={sceneRef} />
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+    <PlaybackSceneProvider>
+      <div className="space-y-4">
+        <WheelOdomViewer />
+        <Card>
+          <CardContent className="pt-6">
+            <div className="aspect-[16/9] w-full border rounded-lg overflow-hidden bg-muted relative">
+              {isConverting ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  <ViewModeToggle />
+                  <PlaybackScene model={{ objContent, isConverting }} className="w-full h-full" />
+                  <ControlPanel
+                    isVisible={isControlsVisible}
+                    onToggleVisibility={() => setIsControlsVisible(!isControlsVisible)}
+                  />
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Debug Information Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Debug Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 font-mono text-sm">
-            <div>
-              <span className="text-muted-foreground">Position: </span>
-              <span>
-                X: {sceneStats?.position.x.toFixed(2) ?? "N/A"}, Y: {sceneStats?.position.y.toFixed(2) ?? "N/A"}, Z:{" "}
-                {sceneStats?.position.z.toFixed(2) ?? "N/A"}
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Rotation: </span>
-              <span>
-                X: {(sceneStats?.rotation.x * (180 / Math.PI)).toFixed(2) ?? "N/A"}°, Y:{" "}
-                {(sceneStats?.rotation.y * (180 / Math.PI)).toFixed(2) ?? "N/A"}°, Z:{" "}
-                {(sceneStats?.rotation.z * (180 / Math.PI)).toFixed(2) ?? "N/A"}°
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">FPS: </span>
-              <span>{sceneStats?.fps ?? "N/A"}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          <TransformForm />
+          <DebugInfo />
+        </div>
+      </div>
+    </PlaybackSceneProvider>
   )
 }
 
