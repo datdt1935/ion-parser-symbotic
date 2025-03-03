@@ -25,3 +25,6 @@ This project parses and visualizes data from an Amazon Ion log file. It includes
 - **Bonus - OhmniClean Log**: Demonstrates video playback from JPEG-compressed frames embedded in the log
 
 A live deployment is available at: [https://datdt1935-ion.vercel.app/](https://datdt1935-ion.vercel.app/)
+
+file .ion at testing download at
+https://drive.google.com/drive/folders/128mWQS91NCNtuv_Y81XDiV9GAvGNEDJT?usp=sharing
