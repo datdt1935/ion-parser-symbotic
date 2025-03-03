@@ -106,6 +106,11 @@ const selectRosoutMessages = createSelector(selectTopics, (topics) => {
   return rosoutTopic.messages || []
 })
 
+const selectBotModelInfo = createSelector(selectRawData, (raw) => {
+  if (!raw) return null
+  return raw.find((item) => item?.metadata?.botModel)?.metadata?.botModel || null
+})
+
 // Slice
 const ionDataSlice = createSlice({
   name: "ionData",
@@ -162,6 +167,7 @@ export const ionDataSelectors = {
   selectSelectedTopic,
   selectPlaybackState,
   selectRosoutMessages,
+  selectBotModelInfo,
 }
 
 export const ionDataActions = ionDataSlice.actions

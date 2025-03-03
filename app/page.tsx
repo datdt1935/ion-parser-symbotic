@@ -14,6 +14,7 @@ import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RosoutAggViewer } from "@/components/rosout-agg-viewer"
 import { BotModelInfo } from "./bot-model-info"
+import { Playback3DViewer } from "@/components/playback-3d-viewer"
 
 export default function IonLogViewer() {
   const dispatch = useDispatch()
@@ -132,6 +133,7 @@ export default function IonLogViewer() {
               <TabsTrigger value="info">Information</TabsTrigger>
               <TabsTrigger value="topics">Topics</TabsTrigger>
               <TabsTrigger value="rosout">Rosout</TabsTrigger>
+              <TabsTrigger value="3d">Playback 3D</TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="space-y-4">
@@ -145,7 +147,11 @@ export default function IonLogViewer() {
               <Card>
                 <CardContent className="pt-6">
                   <h3 className="text-lg font-semibold mb-4">Raw ION Data Preview</h3>
-                  <JsonViewer data={ionData.raw} />
+                  <JsonViewer
+                    data={ionData.raw}
+                    defaultViewMode="tree"
+                    showViewModeToggle={false} // Disable view mode toggle
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -156,6 +162,10 @@ export default function IonLogViewer() {
 
             <TabsContent value="rosout">
               <RosoutAggViewer />
+            </TabsContent>
+
+            <TabsContent value="3d">
+              <Playback3DViewer />
             </TabsContent>
           </Tabs>
         )}

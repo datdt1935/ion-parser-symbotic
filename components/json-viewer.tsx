@@ -1,16 +1,22 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Eye, EyeOff } from "lucide-react"
+import { Search, Eye, EyeOff, Code, List } from 'lucide-react' // Add Code and List icons
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+
+// Add ViewMode to exports
+export type ViewMode = "tree" | "raw"
 
 interface JsonViewerProps {
   data: any
   className?: string
   isExpanded?: boolean
-  enableSearch?: boolean // Add new prop
+  enableSearch?: boolean
+  // Add new props
+  defaultViewMode?: ViewMode
+  showViewModeToggle?: boolean
 }
 
 type FilterMode = "hide" | "display"
@@ -21,13 +27,17 @@ export function JsonViewer({
   data,
   className,
   isExpanded = false,
-  enableSearch = true, // Default to true for backward compatibility
+  enableSearch = true,
+  defaultViewMode = "tree",
+  showViewModeToggle = true,
 }: JsonViewerProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState("")
   const [filterMode, setFilterMode] = useState<FilterMode>("hide")
   const [filteredPaths, setFilteredPaths] = useState<Set<string>>(new Set())
   const [matchedPaths, setMatchedPaths] = useState<Set<string>>(new Set())
+  // Update state to use defaultViewMode
+  const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode)
 
   // Reset filter state when search is disabled
   useEffect(() => {
@@ -315,10 +325,41 @@ export function JsonViewer({
     return <span>{valueString}</span>
   }
 
+  // Add a function to render the raw JSON view
+  const renderRawJson = () => {
+    try {
+      const jsonString = JSON.stringify(data, null, 3)
+
+      if (filter && filter.length >= MIN_FILTER_LENGTH) {
+        // Highlight search matches in raw mode
+        const regex = new RegExp(`(${filter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi")
+        const parts = jsonString.split(regex)
+
+        return (
+          <pre className="whitespace-pre-wrap break-words text-xs">
+            {parts.map((part, i) =>
+              regex.test(part) ? (
+                <span key={i} className="bg-yellow-100 dark:bg-yellow-900/30">
+                  {part}
+                </span>
+              ) : (
+                part
+              ),
+            )}
+          </pre>
+        )
+      }
+
+      return <pre className="whitespace-pre-wrap break-words text-xs">{jsonString}</pre>
+    } catch (error) {
+      return <div className="text-red-500">Error rendering JSON: {String(error)}</div>
+    }
+  }
+
   return (
     <div className={cn("space-y-4", className)}>
-      {enableSearch && (
-        <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        {enableSearch && (
           <div className="relative flex-1">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
             <Input
@@ -336,6 +377,33 @@ export function JsonViewer({
               </div>
             )}
           </div>
+        )}
+
+        {/* Only show view mode toggle if showViewModeToggle is true */}
+        {showViewModeToggle && (
+          <div className="flex border rounded-md overflow-hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn("rounded-none", viewMode === "tree" && "bg-muted")}
+              onClick={() => setViewMode("tree")}
+              title="Tree View"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn("rounded-none", viewMode === "raw" && "bg-muted")}
+              onClick={() => setViewMode("raw")}
+              title="Raw JSON"
+            >
+              <Code className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {filter && filter.length >= MIN_FILTER_LENGTH && (
           <Button
             variant="outline"
             size="icon"
@@ -344,8 +412,8 @@ export function JsonViewer({
           >
             {filterMode === "hide" ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       <div
         className={cn(
@@ -353,7 +421,7 @@ export function JsonViewer({
           !enableSearch && "mt-0", // Remove top margin when search is disabled
         )}
       >
-        {renderValue(data)}
+        {viewMode === "tree" ? renderValue(data) : renderRawJson()}
       </div>
     </div>
   )

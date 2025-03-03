@@ -7,7 +7,7 @@ import { ChevronDown, Download, Loader2, CuboidIcon as Cube, FileJson } from "lu
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
-import { OBJViewer } from "./components/obj-viewer"
+import { OBJViewerScene } from "./scene/obj-viewer-scene"
 import { useModelConverter } from "./hooks/use-model-converter"
 
 interface BotModelInfoProps {
@@ -140,7 +140,7 @@ export function BotModelInfo({ data }: BotModelInfoProps) {
               <JsonViewer data={botModelInfo} isExpanded={true} enableSearch={false} />
             ) : (
               <div className="aspect-video w-full border rounded-lg overflow-hidden bg-muted">
-                <OBJViewer model={{ objContent, isConverting }} className="w-full h-full" />
+                <OBJViewerScene model={{ objContent, isConverting }} className="w-full h-full" />
               </div>
             )}
           </CardContent>
