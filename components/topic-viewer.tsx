@@ -44,6 +44,12 @@ export function TopicViewer() {
     return () => clearInterval(interval)
   }, [playbackState.isPlaying, playbackState.speed, currentMessageIndex, allMessages.length, dispatch])
 
+  const handleTfStaticView = () => {
+    if (topicNames.includes("/tf_static")) {
+      dispatch(ionDataActions.setSelectedTopic("/tf_static"))
+    }
+  }
+
   if (topicNames.length === 0) {
     return (
       <Card>
@@ -71,6 +77,11 @@ export function TopicViewer() {
                 ))}
               </SelectContent>
             </Select>
+            {topicNames.includes("/tf_static") && selectedTopic !== "/tf_static" && (
+              <Button variant="outline" onClick={handleTfStaticView}>
+                View TF Static
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

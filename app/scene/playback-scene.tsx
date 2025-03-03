@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { usePlaybackScene } from "./playback-scene-context"
+import { useTfStatic } from "@/app/hooks/use-tf-static"
 import { cn } from "@/lib/utils"
 
 interface Model3D {
@@ -17,6 +18,7 @@ interface PlaybackSceneProps {
 export function PlaybackScene({ model, className }: PlaybackSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const { initScene, loadModel, viewMode } = usePlaybackScene()
+  const tfTransform = useTfStatic()
 
   // Initialize scene when container is ready
   useEffect(() => {
@@ -24,17 +26,14 @@ export function PlaybackScene({ model, className }: PlaybackSceneProps) {
     initScene(containerRef.current)
   }, [initScene])
 
-  // Load model when content changes
+  // Load model when content or transform changes
   useEffect(() => {
     if (!model.objContent) return
-    loadModel(model.objContent)
-  }, [model.objContent, loadModel])
+    loadModel(model.objContent, tfTransform)
+  }, [model.objContent, tfTransform, loadModel])
 
   // Add class to indicate view mode
-  const sceneClassName = cn(
-    className,
-    viewMode === "third-person" && "cursor-none pointer-events-none", // Hide cursor and disable pointer events in third-person mode
-  )
+  const sceneClassName = cn(className, viewMode === "third-person" && "cursor-none pointer-events-none")
 
   if (model.isConverting) {
     return (

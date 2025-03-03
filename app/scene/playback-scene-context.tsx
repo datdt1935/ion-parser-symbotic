@@ -16,9 +16,17 @@ interface SceneState {
 }
 
 interface Transform {
-  position: THREE.Vector3
-  rotation: THREE.Euler
-  quaternion: THREE.Quaternion
+  translation?: {
+    x: number
+    y: number
+    z: number
+  }
+  rotation?: {
+    x: number
+    y: number
+    z: number
+    w: number
+  }
 }
 
 interface PlaybackSceneContextType {
@@ -36,7 +44,7 @@ interface PlaybackSceneContextType {
   setPosition: (x: number, y: number, z: number) => void
   setRotation: (x: number, y: number, z: number) => void
   setQuaternion: (x: number, y: number, z: number, w: number) => void
-  loadModel: (objContent: string) => Promise<void>
+  loadModel: (objContent: string, transform?: Transform | null) => Promise<void>
   viewMode: "orbit" | "third-person"
   setViewMode: (mode: "orbit" | "third-person") => void
   focusCamera: () => void
@@ -219,7 +227,7 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
   }, [])
 
   const loadModel = useCallback(
-    async (objContent: string) => {
+    async (objContent: string, transform?: Transform | null) => {
       const { scene } = sceneStateRef.current
       if (!scene) return
 
@@ -239,12 +247,34 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
           loader.load(url, resolve, undefined, reject)
         })
 
-        // Center the model
+        // Create a wrapper object to apply the transform
+        const modelWrapper = new THREE.Group()
+
+        // Add the loaded model to the wrapper
+        modelWrapper.add(object)
+
+        // Center the model first
         const box = new THREE.Box3().setFromObject(object)
         const center = box.getCenter(new THREE.Vector3())
-        const size = box.getSize(new THREE.Vector3())
-
         object.position.sub(center)
+
+        // Apply transform from tf_static if available
+        if (transform?.translation) {
+          modelWrapper.position.set(transform.translation.x, transform.translation.y, transform.translation.z)
+        }
+
+        if (transform?.rotation) {
+          modelWrapper.quaternion.set(
+            transform.rotation.x,
+            transform.rotation.y,
+            transform.rotation.z,
+            transform.rotation.w,
+          )
+        } else {
+          // Use default transform if no tf_static data
+          modelWrapper.position.set(0.26805, 0, 1.70554)
+          modelWrapper.quaternion.set(0, 0.46174857461019, 0, 0.8870108532850403)
+        }
 
         // Add default material if none exists
         object.traverse((child) => {
@@ -257,9 +287,9 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
           }
         })
 
-        // Add model to scene
-        scene.add(object)
-        sceneStateRef.current.model = object
+        // Add model wrapper to scene
+        scene.add(modelWrapper)
+        sceneStateRef.current.model = modelWrapper
         updateTransform()
       } catch (error) {
         console.error("Error loading model:", error)

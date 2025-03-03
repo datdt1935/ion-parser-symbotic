@@ -142,18 +142,23 @@ export function OBJViewerScene({ model, className }: OBJViewerSceneProps) {
     loader.load(
       url,
       (object) => {
-        // Center the model
+        // Create a wrapper object to apply the specific transform
+        const modelWrapper = new THREE.Group()
+
+        // Add the loaded model to the wrapper
+        modelWrapper.add(object)
+
+        // Center the model first
         const box = new THREE.Box3().setFromObject(object)
         const center = box.getCenter(new THREE.Vector3())
-        const size = box.getSize(new THREE.Vector3())
-
         object.position.sub(center)
 
-        // Adjust camera to fit model
-        const maxDim = Math.max(size.x, size.y, size.z)
-        const fov = camera.fov * (Math.PI / 180)
-        const cameraZ = Math.abs(maxDim / Math.sin(fov / 2))
-        camera.position.z = cameraZ * 1.5
+        // Apply the specific transform values
+        // Translation
+        modelWrapper.position.set(0.26805, 0, 1.70554)
+
+        // Rotation (using quaternion)
+        modelWrapper.quaternion.set(0, 0.46174857461019, 0, 0.8870108532850403)
 
         // Add some default material if none exists
         object.traverse((child) => {
@@ -168,9 +173,9 @@ export function OBJViewerScene({ model, className }: OBJViewerSceneProps) {
 
         camera.updateProjectionMatrix()
 
-        // Add model to scene
-        scene.add(object)
-        sceneRef.current!.model = object
+        // Add model wrapper to scene
+        scene.add(modelWrapper)
+        sceneRef.current!.model = modelWrapper
       },
       undefined,
       (error) => {
