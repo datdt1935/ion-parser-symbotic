@@ -3,14 +3,13 @@
 import { useEffect, useState, useMemo } from "react"
 import { useDispatch, useSelector } from "@/store/store"
 import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
-import type { RootState } from "@/store/store"
 import { parsePythonByteString, uint8ArrayToBase64 } from "@/app/utils/image-processing"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
-import { Play, Pause, SkipBack, SkipForward, Eye, EyeOff, Camera } from "lucide-react"
+import { Eye, EyeOff, Camera } from "lucide-react"
 import { JsonViewer } from "./json-viewer"
+import { PlaybackControls } from "./playback-controls"
 
 interface CompressedImage {
   header: {
@@ -34,12 +33,9 @@ export function OhmniCleanViewer() {
   const dispatch = useDispatch()
   const availableImageTopic = useSelector(ionDataSelectors.selectAvailableImageTopic)
   const selectedTopic = useSelector(ionDataSelectors.selectSelectedTopic)
-  const currentMessageIndex = useSelector((state: RootState) => state.ionData.currentMessageIndex)
   const allMessages = useSelector(ionDataSelectors.selectCurrentTopicAllMessages)
-  const totalMessages = useSelector(ionDataSelectors.selectTotalMessages)
-  const playbackState = useSelector(ionDataSelectors.selectPlaybackState)
-
-  const [playbackSpeed, setPlaybackSpeed] = useState(1)
+  const playback = useSelector(ionDataSelectors.selectPlayback)
+  const currentMessageIndex = useSelector(ionDataSelectors.selectCurrentMessageIndexByTime)
   const [showJsonViewer, setShowJsonViewer] = useState(false)
 
   // Set default topic when component mounts
@@ -48,6 +44,17 @@ export function OhmniCleanViewer() {
       dispatch(ionDataActions.setSelectedTopic(availableImageTopic))
     }
   }, [availableImageTopic, selectedTopic, dispatch])
+
+  // Update playback time at regular intervals
+  useEffect(() => {
+    if (!playback.isPlaying) return
+
+    const intervalId = setInterval(() => {
+      dispatch(ionDataActions.updatePlaybackTime())
+    }, 16) // ~60fps
+
+    return () => clearInterval(intervalId)
+  }, [playback.isPlaying, dispatch])
 
   // Image processing logic
   const [imageSrc, localError] = useMemo<[string | null, string | null]>(() => {
@@ -86,45 +93,6 @@ export function OhmniCleanViewer() {
       return [null, "Failed to process image data"]
     }
   }, [allMessages, currentMessageIndex])
-
-  // Playback effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null
-
-    if (playbackState.isPlaying && allMessages.length) {
-      interval = setInterval(
-        () => {
-          const nextIndex = (currentMessageIndex + 1) % allMessages.length
-          if (nextIndex !== currentMessageIndex) {
-            dispatch(ionDataActions.setCurrentMessageIndex(nextIndex))
-          }
-        },
-        1000 / (playbackState.speed * playbackSpeed),
-      )
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval)
-      }
-    }
-  }, [playbackState.isPlaying, playbackState.speed, playbackSpeed, currentMessageIndex, allMessages.length, dispatch])
-
-  const handleSliderChange = (value: number[]) => {
-    dispatch(ionDataActions.setCurrentMessageIndex(value[0]))
-  }
-
-  const togglePlayback = () => {
-    dispatch(ionDataActions.setPlaybackState({ isPlaying: !playbackState.isPlaying }))
-  }
-
-  const skipBackward = () => {
-    dispatch(ionDataActions.setCurrentMessageIndex(Math.max(0, currentMessageIndex - 10)))
-  }
-
-  const skipForward = () => {
-    dispatch(ionDataActions.setCurrentMessageIndex(Math.min(totalMessages - 1, currentMessageIndex + 10)))
-  }
 
   // If no image topic is available, don't render the component
   if (!availableImageTopic) {
@@ -171,45 +139,8 @@ export function OhmniCleanViewer() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <select
-                    className="text-sm border rounded px-2 py-1"
-                    value={playbackSpeed}
-                    onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-                  >
-                    <option value="0.25">0.25x</option>
-                    <option value="0.5">0.5x</option>
-                    <option value="1">1x</option>
-                    <option value="2">2x</option>
-                    <option value="4">4x</option>
-                  </select>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Frame {currentMessageIndex + 1} of {totalMessages}
-                </div>
-              </div>
-
-              <div className="mb-6 space-y-4">
-                <div className="flex items-center gap-4">
-                  <Button variant="outline" size="icon" onClick={skipBackward} className="w-10 h-10">
-                    <SkipBack className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={togglePlayback} className="w-10 h-10">
-                    {playbackState.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={skipForward} className="w-10 h-10">
-                    <SkipForward className="h-4 w-4" />
-                  </Button>
-                  <div className="flex-1">
-                    <Slider
-                      value={[currentMessageIndex]}
-                      max={Math.max(0, totalMessages - 1)}
-                      step={1}
-                      onValueChange={handleSliderChange}
-                    />
-                  </div>
-                </div>
+              <div className="mb-6">
+                <PlaybackControls />
               </div>
 
               {showJsonViewer && (

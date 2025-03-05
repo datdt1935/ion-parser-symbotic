@@ -14,11 +14,17 @@ export interface IonDataState {
   }
   selectedTopic: string | null
   currentMessageIndex: number
+  // New timestamp-based playback state
   playback: {
     isPlaying: boolean
-    speed: number // messages per second
+    speed: number // playback speed multiplier
+    currentTime: number // current playback time in milliseconds
+    startTime: number | null // timestamp when playback started
+    startOffset: number // offset from the beginning of the log
+    logStartTime: number | null // timestamp of the first message
+    logEndTime: number | null // timestamp of the last message
   }
-  availableImageTopic: string | null // Add this line
+  availableImageTopic: string | null
 }
 
 interface SetDataPayload {
@@ -42,9 +48,14 @@ export const initialState: IonDataState = {
   currentMessageIndex: 0,
   playback: {
     isPlaying: false,
-    speed: 1, // Default speed: 1 message per second
+    speed: 1, // Default speed: 1x
+    currentTime: 0,
+    startTime: null,
+    startOffset: 0,
+    logStartTime: null,
+    logEndTime: null,
   },
-  availableImageTopic: null, // Add this line
+  availableImageTopic: null,
 }
 
 // Helper function to extract topics from raw data
@@ -70,6 +81,39 @@ const extractTopics = (rawData: any[]): TopicMessage[] => {
   return topics
 }
 
+// Helper function to find log start and end times
+const findLogTimeRange = (rawData: any[]): { startTime: number | null; endTime: number | null } => {
+  let startTime: number | null = null
+  let endTime: number | null = null
+
+  // Flatten all messages from all topics
+  const allMessages: { timestamp: number }[] = []
+
+  rawData.forEach((item) => {
+    if (item?.topics && Array.isArray(item.topics)) {
+      item.topics.forEach((topic: any) => {
+        if (Array.isArray(topic.messages)) {
+          topic.messages.forEach((msg: any) => {
+            if (msg.timestamp) {
+              allMessages.push({ timestamp: msg.timestamp })
+            }
+          })
+        }
+      })
+    }
+  })
+
+  // Sort messages by timestamp
+  allMessages.sort((a, b) => a.timestamp - b.timestamp)
+
+  if (allMessages.length > 0) {
+    startTime = allMessages[0].timestamp
+    endTime = allMessages[allMessages.length - 1].timestamp
+  }
+
+  return { startTime, endTime }
+}
+
 // Base selectors
 const selectIonData = (state: RootState) => state.ionData.data
 const selectRawData = (state: RootState) => state.ionData.data?.raw
@@ -78,6 +122,7 @@ const selectError = (state: RootState) => state.ionData.error
 const selectFilters = (state: RootState) => state.ionData.filters
 const selectSelectedTopic = (state: RootState) => state.ionData.selectedTopic
 const selectAvailableImageTopic = (state: RootState) => state.ionData.availableImageTopic
+const selectPlayback = (state: RootState) => state.ionData.playback
 
 // Derived selectors
 const selectTopics = createSelector(selectRawData, (raw) => (raw ? extractTopics(raw) : []))
@@ -100,8 +145,38 @@ const selectCurrentTopicAllMessages = createSelector(
 
 const selectTotalMessages = createSelector([selectCurrentTopicAllMessages], (messages) => messages.length)
 
-// Add playback selectors
-const selectPlaybackState = (state: RootState) => state.ionData.playback
+// New selector to get log duration in milliseconds
+const selectLogDuration = createSelector([selectPlayback], (playback) => {
+  if (playback.logStartTime === null || playback.logEndTime === null) return 0
+  return playback.logEndTime - playback.logStartTime
+})
+
+// New selector to find the message index based on current playback time
+const selectCurrentMessageIndexByTime = createSelector(
+  [selectCurrentTopicAllMessages, selectPlayback],
+  (messages, playback) => {
+    if (!messages.length || playback.logStartTime === null) return 0
+
+    // Find the message with timestamp closest to current playback time
+    const targetTime = playback.logStartTime + playback.currentTime
+
+    // Binary search would be more efficient for large logs
+    let closestIndex = 0
+    let closestDiff = Number.MAX_SAFE_INTEGER
+
+    messages.forEach((msg, index) => {
+      if (msg.timestamp) {
+        const diff = Math.abs(msg.timestamp - targetTime)
+        if (diff < closestDiff) {
+          closestDiff = diff
+          closestIndex = index
+        }
+      }
+    })
+
+    return closestIndex
+  },
+)
 
 const selectRosoutMessages = createSelector(selectTopics, (topics) => {
   const rosoutTopic = topics.find((t) => t.topicName === "/rosout_agg")
@@ -131,6 +206,15 @@ const ionDataSlice = createSlice({
       state.selectedTopic = null
       state.currentMessageIndex = 0
 
+      // Initialize playback time range
+      const { startTime, endTime } = findLogTimeRange(action.payload.data.raw || [])
+      state.playback.logStartTime = startTime
+      state.playback.logEndTime = endTime
+      state.playback.currentTime = 0
+      state.playback.startOffset = 0
+      state.playback.startTime = null
+      state.playback.isPlaying = false
+
       // Check for available image topic when data is loaded
       const topics = extractTopics(action.payload.data.raw || [])
       state.availableImageTopic =
@@ -147,7 +231,7 @@ const ionDataSlice = createSlice({
     clearData(state) {
       return {
         ...initialState,
-        availableImageTopic: null, // Make sure to clear this too
+        availableImageTopic: null,
       }
     },
     setSelectedTopic(state, action: PayloadAction<string | null>) {
@@ -157,11 +241,59 @@ const ionDataSlice = createSlice({
     setCurrentMessageIndex(state, action: PayloadAction<number>) {
       state.currentMessageIndex = action.payload
     },
-    setPlaybackState(state, action: PayloadAction<{ isPlaying: boolean }>) {
-      state.playback.isPlaying = action.payload.isPlaying
+    // Updated playback actions
+    startPlayback(state) {
+      state.playback.isPlaying = true
+      state.playback.startTime = Date.now()
+    },
+    pausePlayback(state) {
+      if (state.playback.isPlaying) {
+        state.playback.isPlaying = false
+        // Save current position as offset for next play
+        if (state.playback.startTime !== null) {
+          const elapsed = (Date.now() - state.playback.startTime) * state.playback.speed
+          state.playback.startOffset = state.playback.startOffset + elapsed
+        }
+        state.playback.startTime = null
+      }
     },
     setPlaybackSpeed(state, action: PayloadAction<number>) {
+      // When changing speed during playback, we need to adjust the offset and restart
+      if (state.playback.isPlaying && state.playback.startTime !== null) {
+        const elapsed = (Date.now() - state.playback.startTime) * state.playback.speed
+        state.playback.startOffset = state.playback.startOffset + elapsed
+        state.playback.startTime = Date.now()
+      }
       state.playback.speed = action.payload
+    },
+    updatePlaybackTime(state) {
+      if (state.playback.isPlaying && state.playback.startTime !== null) {
+        const elapsed = (Date.now() - state.playback.startTime) * state.playback.speed
+        state.playback.currentTime = state.playback.startOffset + elapsed
+
+        // Loop playback if we reach the end
+        if (
+          state.playback.logEndTime !== null &&
+          state.playback.logStartTime !== null &&
+          state.playback.currentTime > state.playback.logEndTime - state.playback.logStartTime
+        ) {
+          state.playback.startOffset = 0
+          state.playback.startTime = Date.now()
+          state.playback.currentTime = 0
+        }
+      }
+    },
+    seekPlayback(state, action: PayloadAction<number>) {
+      // Seek to a specific percentage of the log duration
+      if (state.playback.logStartTime !== null && state.playback.logEndTime !== null) {
+        const duration = state.playback.logEndTime - state.playback.logStartTime
+        state.playback.currentTime = duration * action.payload
+        state.playback.startOffset = state.playback.currentTime
+
+        if (state.playback.isPlaying) {
+          state.playback.startTime = Date.now()
+        }
+      }
     },
   },
 })
@@ -178,10 +310,12 @@ export const ionDataSelectors = {
   selectCurrentTopicAllMessages,
   selectTotalMessages,
   selectSelectedTopic,
-  selectPlaybackState,
+  selectPlayback,
   selectRosoutMessages,
   selectBotModelInfo,
   selectAvailableImageTopic,
+  selectLogDuration,
+  selectCurrentMessageIndexByTime,
 }
 
 export const ionDataActions = ionDataSlice.actions

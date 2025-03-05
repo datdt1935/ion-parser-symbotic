@@ -1,82 +1,77 @@
-"use client";
+"use client"
 
-import type React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Upload, Loader2, FileJson } from "lucide-react";
-import { SessionInfo } from "./session-info";
-import { RobotInfo } from "./robot-info";
-import { TopicViewer } from "@/components/topic-viewer";
-import { IonParser } from "./ion-parser";
-import { JsonViewer } from "@/components/json-viewer";
-import { useDispatch, useSelector } from "@/store/store";
-import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RosoutAggViewer } from "@/components/rosout-agg-viewer";
-import { BotModelInfo } from "./bot-model-info";
-import { Playback3DViewer } from "@/components/playback-3d-viewer";
-import { OhmniCleanViewer } from "@/components/ohmni-clean-viewer";
+import type React from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Upload, Loader2, FileJson } from "lucide-react"
+import { SessionInfo } from "./session-info"
+import { RobotInfo } from "./robot-info"
+import { TopicViewer } from "@/components/topic-viewer"
+import { IonParser } from "./ion-parser"
+import { JsonViewer } from "@/components/json-viewer"
+import { useDispatch, useSelector } from "@/store/store"
+import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { RosoutAggViewer } from "@/components/rosout-agg-viewer"
+import { BotModelInfo } from "./bot-model-info"
+import { Playback3DViewer } from "@/components/playback-3d-viewer"
+import { OhmniCleanViewer } from "@/components/ohmni-clean-viewer"
 
 export default function IonLogViewer() {
-  const dispatch = useDispatch();
-  const ionData = useSelector(ionDataSelectors.selectIonData);
-  const isLoading = useSelector(ionDataSelectors.selectIsLoading);
-  const error = useSelector(ionDataSelectors.selectError);
-  const topicNames = useSelector(ionDataSelectors.selectTopicNames);
+  const dispatch = useDispatch()
+  const ionData = useSelector(ionDataSelectors.selectIonData)
+  const isLoading = useSelector(ionDataSelectors.selectIsLoading)
+  const error = useSelector(ionDataSelectors.selectError)
+  const topicNames = useSelector(ionDataSelectors.selectTopicNames)
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
     if (!file) {
-      dispatch(ionDataActions.setError({ error: "No file selected" }));
-      return;
+      dispatch(ionDataActions.setError({ error: "No file selected" }))
+      return
     }
 
-    dispatch(ionDataActions.pushLoading());
-    dispatch(ionDataActions.setError({ error: "" }));
+    dispatch(ionDataActions.pushLoading())
+    dispatch(ionDataActions.setError({ error: "" }))
 
     try {
       if (file.size === 0) {
-        throw new Error("The selected file is empty");
+        throw new Error("The selected file is empty")
       }
 
-      const buffer = await file.arrayBuffer();
+      const buffer = await file.arrayBuffer()
 
       if (buffer.byteLength === 0) {
-        throw new Error("File content is empty");
+        throw new Error("File content is empty")
       }
 
-      const parsedData = await IonParser.parse(buffer);
+      const parsedData = await IonParser.parse(buffer)
 
       if (!parsedData.raw.length) {
-        throw new Error("No valid data found in the file");
+        throw new Error("No valid data found in the file")
       }
 
-      dispatch(ionDataActions.setData({ data: parsedData }));
+      dispatch(ionDataActions.setData({ data: parsedData }))
     } catch (err) {
-      console.error("File processing error:", err);
+      console.error("File processing error:", err)
       dispatch(
         ionDataActions.setError({
-          error:
-            err instanceof Error ? err.message : "Failed to process the file",
-        })
-      );
+          error: err instanceof Error ? err.message : "Failed to process the file",
+        }),
+      )
     } finally {
-      dispatch(ionDataActions.popLoading());
+      dispatch(ionDataActions.popLoading())
     }
-  };
+  }
 
-  const availableImageTopic = useSelector(
-    ionDataSelectors.selectAvailableImageTopic
-  );
+  const availableImageTopic = useSelector(ionDataSelectors.selectAvailableImageTopic)
 
   // Handle tab changes to ensure correct topic selection
   const handleTabChange = (value: string) => {
     if (value === "rosout" && topicNames.includes("/rosout_agg")) {
-      dispatch(ionDataActions.setSelectedTopic("/rosout_agg"));
+      dispatch(ionDataActions.setSelectedTopic("/rosout_agg"))
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,13 +95,7 @@ export default function IonLogViewer() {
                   Import ION File
                 </>
               )}
-              <input
-                type="file"
-                className="hidden"
-                accept=".ion"
-                onChange={handleFileUpload}
-                disabled={isLoading}
-              />
+              <input type="file" className="hidden" accept=".ion" onChange={handleFileUpload} disabled={isLoading} />
             </label>
           </Button>
         </div>
@@ -114,9 +103,7 @@ export default function IonLogViewer() {
 
       <main className="container mx-auto px-4 py-6">
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-md">
-            {error}
-          </div>
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-md">{error}</div>
         )}
 
         {!ionData && !error && (
@@ -124,9 +111,7 @@ export default function IonLogViewer() {
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <Upload className="h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold mb-2">No File Loaded</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Upload an ION log file to view its contents
-              </p>
+              <p className="text-sm text-muted-foreground mb-4">Upload an ION log file to view its contents</p>
               <Button variant="outline" disabled={isLoading}>
                 <label className="cursor-pointer flex items-center">
                   {isLoading ? (
@@ -154,19 +139,13 @@ export default function IonLogViewer() {
         )}
 
         {ionData && ionData.raw.length > 0 && (
-          <Tabs
-            defaultValue="info"
-            className="space-y-4"
-            onValueChange={handleTabChange}
-          >
+          <Tabs defaultValue="info" className="space-y-4" onValueChange={handleTabChange}>
             <TabsList>
               <TabsTrigger value="info">Information</TabsTrigger>
               <TabsTrigger value="topics">Topics</TabsTrigger>
               <TabsTrigger value="rosout">Rosout</TabsTrigger>
               <TabsTrigger value="3d">Playback 3D</TabsTrigger>
-              {availableImageTopic && (
-                <TabsTrigger value="ohmni">OhmniClean log</TabsTrigger>
-              )}
+              {availableImageTopic && <TabsTrigger value="ohmni">OhmniClean log</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="info" className="space-y-4">
@@ -179,9 +158,7 @@ export default function IonLogViewer() {
 
               <Card>
                 <CardContent className="pt-6">
-                  <h3 className="text-lg font-semibold mb-4">
-                    Raw ION Data Preview
-                  </h3>
+                  <h3 className="text-lg font-semibold mb-4">Raw ION Data Preview</h3>
                   <JsonViewer
                     data={ionData.raw}
                     defaultViewMode="tree"
@@ -212,5 +189,6 @@ export default function IonLogViewer() {
         )}
       </main>
     </div>
-  );
+  )
 }
+

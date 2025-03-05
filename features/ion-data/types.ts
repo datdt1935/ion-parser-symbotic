@@ -18,6 +18,16 @@ export interface IonDataState {
   }
   selectedTopic: string | null
   currentMessageIndex: number
+  playback: {
+    isPlaying: boolean
+    speed: number // playback speed multiplier
+    currentTime: number // current playback time in milliseconds
+    startTime: number | null // timestamp when playback started
+    startOffset: number // offset from the beginning of the log
+    logStartTime: number | null // timestamp of the first message
+    logEndTime: number | null // timestamp of the last message
+  }
+  availableImageTopic: string | null
 }
 
 export interface SetDataPayload {
