@@ -1,17 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
 import { useSelector } from "@/store/store"
 import { ionDataSelectors } from "@/features/ion-data/slice"
 import { useModelConverter } from "@/app/hooks/use-model-converter"
-import { Loader2, EyeIcon as Eye3d, View } from "lucide-react" // Add Eye3d and View icons
+import { Loader2, Eye, View } from "lucide-react"
 import { PlaybackScene } from "@/app/scene/playback-scene"
 import { PlaybackSceneProvider, usePlaybackScene } from "@/app/scene/playback-scene-context"
 import { ControlPanel } from "./control-panel"
-import { TransformForm } from "./transform-form"
-import { DebugInfo } from "./debug-info"
-import { WheelOdomViewer } from "./wheel-odom-viewer"
 import { Button } from "@/components/ui/button"
 
 // Update the ViewModeToggle button text to reflect the new default state
@@ -29,7 +25,7 @@ function ViewModeToggle() {
     >
       {viewMode === "orbit" ? (
         <>
-          <Eye3d className="h-4 w-4 mr-2" />
+          <Eye className="h-4 w-4 mr-2" />
           Third Person
         </>
       ) : (
@@ -44,60 +40,53 @@ function ViewModeToggle() {
 
 export function Playback3DViewer() {
   const [isControlsVisible, setIsControlsVisible] = useState(false)
-  const botModelInfo = useSelector(ionDataSelectors.selectBotModelInfo)
+
+  // Use a safer approach to get the botModelInfo
+  const botModelInfo = useSelector((state) => {
+    const info = ionDataSelectors.selectBotModelInfo(state)
+    return info || null
+  })
+
+  // Only call useModelConverter if botModelInfo is not null
   const { objContent, isConverting, error } = useModelConverter(botModelInfo)
 
   if (!botModelInfo) {
     return (
-      <Card>
-        <CardContent className="py-6">
-          <p className="text-center text-muted-foreground">No 3D model data found in the log file</p>
-        </CardContent>
-      </Card>
+      <div className="aspect-video w-full bg-muted rounded-lg flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
+          <p>No 3D model data found</p>
+        </div>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="py-6">
-          <div className="p-4 bg-destructive/10 text-destructive rounded-md">
-            Failed to load 3D model: {error.message}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="aspect-video w-full bg-muted rounded-lg flex items-center justify-center">
+        <div className="text-center text-destructive p-4">
+          <p>Failed to load 3D model: {error.message}</p>
+        </div>
+      </div>
     )
   }
 
   return (
     <PlaybackSceneProvider>
-      <div className="space-y-4">
-        <WheelOdomViewer />
-        <Card>
-          <CardContent className="pt-6">
-            <div className="aspect-[16/9] w-full border rounded-lg overflow-hidden bg-muted relative">
-              {isConverting ? (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <>
-                  <ViewModeToggle />
-                  <PlaybackScene model={{ objContent, isConverting }} className="w-full h-full" />
-                  <ControlPanel
-                    isVisible={isControlsVisible}
-                    onToggleVisibility={() => setIsControlsVisible(!isControlsVisible)}
-                  />
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <TransformForm />
-          <DebugInfo />
-        </div>
+      <div className="aspect-video w-full border rounded-lg overflow-hidden bg-muted relative">
+        {isConverting ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            <ViewModeToggle />
+            <PlaybackScene model={{ objContent, isConverting }} className="w-full h-full" />
+            <ControlPanel
+              isVisible={isControlsVisible}
+              onToggleVisibility={() => setIsControlsVisible(!isControlsVisible)}
+            />
+          </>
+        )}
       </div>
     </PlaybackSceneProvider>
   )

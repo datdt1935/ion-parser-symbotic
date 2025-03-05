@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { useDispatch, useSelector } from "@/store/store"
 import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
 import { Slider } from "@/components/ui/slider"
@@ -25,11 +26,34 @@ export function PlaybackControls({
   const currentMessageIndex = useSelector(ionDataSelectors.selectCurrentMessageIndexByTime)
   const totalMessages = useSelector(ionDataSelectors.selectTotalMessages)
 
+  // Use a ref to track if we're currently handling a slider change
+  // This prevents the infinite update loop
+  const isChangingRef = useRef(false)
+
   // Calculate playback progress percentage
   const playbackProgress = logDuration > 0 ? (playback.currentTime / logDuration) * 100 : 0
 
+  // Update playback time at regular intervals
+  useEffect(() => {
+    if (!playback.isPlaying) return
+
+    const intervalId = setInterval(() => {
+      dispatch(ionDataActions.updatePlaybackTime())
+    }, 16) // ~60fps
+
+    return () => clearInterval(intervalId)
+  }, [playback.isPlaying, dispatch])
+
   const handleSliderChange = (value: number[]) => {
+    if (isChangingRef.current) return
+
+    isChangingRef.current = true
     dispatch(ionDataActions.seekPlayback(value[0] / 100))
+
+    // Reset the flag after a short delay to allow the state to settle
+    setTimeout(() => {
+      isChangingRef.current = false
+    }, 50)
   }
 
   const togglePlayback = () => {
@@ -83,7 +107,7 @@ export function PlaybackControls({
           <span>
             {formatTime(playback.currentTime)} / {formatTime(logDuration)}
           </span>
-          {!compact && (
+          {!compact && totalMessages > 0 && (
             <span>
               Message {currentMessageIndex + 1} of {totalMessages}
             </span>

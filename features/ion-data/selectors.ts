@@ -22,5 +22,15 @@ export const selectors = {
       return raw.find((item) => item?.metadata?.botConfig)?.metadata?.botConfig || null
     },
   ),
+
+    selectBotInfo: createSelector(
+    (state: RootState) => state.ionData.data?.raw,
+    (raw) => {
+      if (!raw) return null
+      return raw.find((item) => item?.metadata?.botConfig)?.metadata?.botInfo || null
+    },
+  ),
+
+  
 }
 

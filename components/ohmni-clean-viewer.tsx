@@ -1,15 +1,10 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { useDispatch, useSelector } from "@/store/store"
 import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
 import { parsePythonByteString, uint8ArrayToBase64 } from "@/app/utils/image-processing"
-
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Eye, EyeOff, Camera } from "lucide-react"
-import { JsonViewer } from "./json-viewer"
-import { PlaybackControls } from "./playback-controls"
+import { Camera } from "lucide-react"
 
 interface CompressedImage {
   header: {
@@ -36,7 +31,6 @@ export function OhmniCleanViewer() {
   const allMessages = useSelector(ionDataSelectors.selectCurrentTopicAllMessages)
   const playback = useSelector(ionDataSelectors.selectPlayback)
   const currentMessageIndex = useSelector(ionDataSelectors.selectCurrentMessageIndexByTime)
-  const [showJsonViewer, setShowJsonViewer] = useState(false)
 
   // Set default topic when component mounts
   useEffect(() => {
@@ -94,66 +88,38 @@ export function OhmniCleanViewer() {
     }
   }, [allMessages, currentMessageIndex])
 
-  // If no image topic is available, don't render the component
+  // If no image topic is available, show placeholder
   if (!availableImageTopic) {
-    return null
+    return (
+      <div className="aspect-video w-full bg-black/10 rounded-lg flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
+          <Camera className="h-8 w-8 mx-auto mb-2" />
+          <p>No camera feed available</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardContent className="py-6 relative">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Camera className="h-5 w-5 text-muted-foreground" />
-              <h3 className="text-lg font-semibold">OhmniClean log</h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="px-3" onClick={() => setShowJsonViewer(!showJsonViewer)}>
-                {showJsonViewer ? <Eye className="h-4 w-4 mr-2" /> : <EyeOff className="h-4 w-4 mr-2" />}
-                {showJsonViewer ? "Hide Data" : "Show Data"}
-              </Button>
-            </div>
-          </div>
-
-          {selectedTopic && allMessages ? (
-            <>
-              <div className="mb-6 aspect-video w-full bg-black/10 rounded-lg overflow-hidden relative">
-                {localError ? (
-                  <div className="absolute inset-0 flex items-center justify-center text-sm text-red-500 bg-black/5 p-4 text-center">
-                    {localError}
-                  </div>
-                ) : imageSrc ? (
-                  <img
-                    src={imageSrc || "/placeholder.svg"}
-                    alt="Camera Feed"
-                    className="w-full h-full object-contain"
-                    onError={() => {
-                      console.error("Failed to load image in <img> element.")
-                    }}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground bg-black/5 p-4 text-center">
-                    No image data available
-                  </div>
-                )}
-              </div>
-
-              <div className="mb-6">
-                <PlaybackControls />
-              </div>
-
-              {showJsonViewer && (
-                <JsonViewer data={allMessages[currentMessageIndex] || {}} isExpanded={true} enableSearch={true} />
-              )}
-            </>
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              No image data available for {availableImageTopic}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    <div className="aspect-video w-full bg-black/10 rounded-lg overflow-hidden relative">
+      {localError ? (
+        <div className="absolute inset-0 flex items-center justify-center text-sm text-red-500 bg-black/5 p-4 text-center">
+          {localError}
+        </div>
+      ) : imageSrc ? (
+        <img
+          src={imageSrc || "/placeholder.svg"}
+          alt="Camera Feed"
+          className="w-full h-full object-contain"
+          onError={() => {
+            console.error("Failed to load image in <img> element.")
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground bg-black/5 p-4 text-center">
+          No image data available
+        </div>
+      )}
     </div>
   )
 }

@@ -184,10 +184,33 @@ const selectRosoutMessages = createSelector(selectTopics, (topics) => {
   return rosoutTopic.messages || []
 })
 
-const selectBotModelInfo = createSelector(selectRawData, (raw) => {
-  if (!raw) return null
-  return raw.find((item) => item?.metadata?.botModel)?.metadata?.botModel || null
-})
+const selectSessionInfo = createSelector(
+  (state: RootState) => state.ionData.data?.raw,
+  (raw) => {
+    if (!raw) return null
+    const sessionData = raw.find((item) => item?.metadata?.sessionInfo)
+    return sessionData?.metadata?.sessionInfo || null
+  },
+)
+
+const selectBotConfig = createSelector(
+  (state: RootState) => state.ionData.data?.raw,
+  (raw) => {
+    if (!raw) return null
+    const botConfigData = raw.find((item) => item?.metadata?.botConfig)
+    return botConfigData?.metadata?.botConfig || null
+  },
+)
+
+// Make sure the selectBotModelInfo selector is properly defined
+const selectBotModelInfo = createSelector(
+  (state: RootState) => state.ionData.data?.raw,
+  (raw) => {
+    if (!raw) return null
+    const botModelData = raw.find((item) => item?.metadata?.botModel)
+    return botModelData?.metadata?.botModel || null
+  },
+)
 
 // Slice
 const ionDataSlice = createSlice({
@@ -316,6 +339,17 @@ export const ionDataSelectors = {
   selectAvailableImageTopic,
   selectLogDuration,
   selectCurrentMessageIndexByTime,
+  selectSessionInfo,
+  selectBotConfig,
+  // Add the missing selectBotInfo selector
+  selectBotInfo: createSelector(
+    (state: RootState) => state.ionData.data?.raw,
+    (raw) => {
+      if (!raw) return null
+      const botInfoData = raw.find((item) => item?.metadata?.botInfo)
+      return botInfoData?.metadata?.botInfo || null
+    },
+  ),
 }
 
 export const ionDataActions = ionDataSlice.actions
