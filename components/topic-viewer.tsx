@@ -1,13 +1,12 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-
 import { useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { JsonViewer } from "./json-viewer"
 import { useDispatch, useSelector } from "@/store/store"
-import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
+import { ionDataActions, ionDataSelectors } from "@/features/ion-data" // Import from index
 import { PlaybackControls } from "./playback-controls"
 
 export function TopicViewer() {

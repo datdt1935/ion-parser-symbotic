@@ -227,13 +227,23 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
   }, [])
 
   const loadModel = useCallback(
-    async (objContent: string, transform?: Transform | null) => {
+    async (objContent: string) => {
       const { scene } = sceneStateRef.current
       if (!scene) return
 
       // Remove existing model if any
       if (sceneStateRef.current.model) {
         scene.remove(sceneStateRef.current.model)
+        sceneStateRef.current.model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose()
+            if (child.material instanceof THREE.Material) {
+              child.material.dispose()
+            } else if (Array.isArray(child.material)) {
+              child.material.forEach((material) => material.dispose())
+            }
+          }
+        })
       }
 
       // Create blob URL from OBJ content
@@ -247,34 +257,14 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
           loader.load(url, resolve, undefined, reject)
         })
 
-        // Create a wrapper object to apply the transform
-        const modelWrapper = new THREE.Group()
-
-        // Add the loaded model to the wrapper
-        modelWrapper.add(object)
-
-        // Center the model first
+        // Center the model
         const box = new THREE.Box3().setFromObject(object)
         const center = box.getCenter(new THREE.Vector3())
         object.position.sub(center)
 
-        // Apply transform from tf_static if available
-        if (transform?.translation) {
-          modelWrapper.position.set(transform.translation.x, transform.translation.y, transform.translation.z)
-        }
-
-        if (transform?.rotation) {
-          modelWrapper.quaternion.set(
-            transform.rotation.x,
-            transform.rotation.y,
-            transform.rotation.z,
-            transform.rotation.w,
-          )
-        } else {
-          // Use default transform if no tf_static data
-          modelWrapper.position.set(0.26805, 0, 1.70554)
-          modelWrapper.quaternion.set(0, 0.46174857461019, 0, 0.8870108532850403)
-        }
+        // Apply default transform
+        object.position.set(0.26805, 0, 1.70
+        object.quaternion.set(0, 0.46174857461019, 0, 0.8870108532850403)
 
         // Add default material if none exists
         object.traverse((child) => {
@@ -287,9 +277,9 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
           }
         })
 
-        // Add model wrapper to scene
-        scene.add(modelWrapper)
-        sceneStateRef.current.model = modelWrapper
+        // Add model to scene
+        scene.add(object)
+        sceneStateRef.current.model = object
         updateTransform()
       } catch (error) {
         console.error("Error loading model:", error)

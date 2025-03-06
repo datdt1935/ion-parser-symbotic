@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useSelector } from "@/store/store"
-import { ionDataSelectors } from "@/features/ion-data/slice"
+import { ionDataSelectors } from "@/features/ion-data"
 import { useModelConverter } from "@/app/hooks/use-model-converter"
 import { Loader2, Eye, View } from "lucide-react"
 import { PlaybackScene } from "@/app/scene/playback-scene"

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react"
 import { useDispatch, useSelector } from "@/store/store"
-import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
+import { ionDataActions, ionDataSelectors } from "@/features/ion-data" // Import from index
 import { parsePythonByteString, uint8ArrayToBase64 } from "@/app/utils/image-processing"
 import { Camera } from "lucide-react"
 

@@ -10,7 +10,7 @@ import { TopicViewer } from "@/components/topic-viewer"
 import { IonParser } from "./ion-parser"
 import { JsonViewer } from "@/components/json-viewer"
 import { useDispatch, useSelector } from "@/store/store"
-import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
+import { ionDataActions, ionDataSelectors } from "@/features/ion-data" // Import from index
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RosoutAggViewer } from "@/components/rosout-agg-viewer"
 import { BotModelInfo } from "./bot-model-info"

@@ -2,7 +2,7 @@
 
 import { Clock, Bot, Settings } from "lucide-react"
 import { useSelector } from "@/store/store"
-import { ionDataSelectors } from "@/features/ion-data/slice"
+import { ionDataSelectors } from "@/features/ion-data" // Import from index
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ObjectInfoViewer } from "./object-info-viewer"
 
@@ -80,7 +80,7 @@ export function Sidebar() {
           <AccordionTrigger className="px-4 py-3">
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5" />
-              <span className="font-semibold">Robot Information</span>
+              <span className="font-semibold">{botInfo?.botName || "Robot Information"}</span>
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-4 pb-4">
@@ -104,6 +104,7 @@ export function Sidebar() {
               data={botConfig}
               priorityFields={configPriorityFields}
               excludedFields={configExcludedFields}
+              displayAsRow={true}
             />
           </AccordionContent>
         </AccordionItem>

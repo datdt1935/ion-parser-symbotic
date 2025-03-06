@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { JsonViewer } from "./json-viewer"
 import { useDispatch, useSelector } from "@/store/store"
-import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
+import { ionDataActions, ionDataSelectors } from "@/features/ion-data" // Import from index
 import { Button } from "@/components/ui/button"
 import { Eye, EyeOff } from "lucide-react"
 import { usePlaybackScene } from "@/app/scene/playback-scene-context"

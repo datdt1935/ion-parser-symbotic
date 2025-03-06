@@ -4,7 +4,7 @@ import { useCallback } from "react"
 import { useDropzone } from "react-dropzone"
 import { Cloud, Loader2 } from "lucide-react"
 import { useDispatch, useSelector } from "@/store/store"
-import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
+import { ionDataActions, ionDataSelectors } from "@/features/ion-data" // Import from index
 import { IonParser } from "../ion-parser"
 import { cn } from "@/lib/utils"
 import { Sidebar } from "./components/sidebar"
@@ -98,7 +98,7 @@ export default function NewIonLogViewer() {
 
       {ionData && (
         <div className="container mx-auto p-4">
-          <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-4">
             {/* Left Sidebar */}
             <Sidebar />
 

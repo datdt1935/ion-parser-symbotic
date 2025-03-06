@@ -8,17 +8,34 @@ interface InfoRowProps {
   label: string
   value: any
   className?: string
+  displayAsRow?: boolean
 }
 
-function InfoRow({ label, value, className = "" }: InfoRowProps) {
+function InfoRow({ label, value, className = "", displayAsRow = false }: InfoRowProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
-  // Format the label to be more readable
-  const formattedLabel = label
-    .replace(/_/g, " ")
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
+  // Format the label to be more readable when not in row display mode
+  const formattedLabel = displayAsRow
+    ? label
+    : label
+        .replace(/_/g, " ")
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")
+
+  // Helper function to determine value color based on type
+  const getValueColor = (val: any) => {
+    if (typeof val === "boolean") {
+      return val ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+    }
+    if (typeof val === "number") {
+      return "text-blue-600 dark:text-blue-400"
+    }
+    if (typeof val === "string" && val.startsWith("/dev")) {
+      return "text-purple-600 dark:text-purple-400"
+    }
+    return "text-gray-900 dark:text-gray-100"
+  }
 
   // Render different types of values appropriately
   const renderValue = () => {
@@ -27,11 +44,11 @@ function InfoRow({ label, value, className = "" }: InfoRowProps) {
     }
 
     if (typeof value === "boolean") {
-      return <span className={value ? "text-green-600" : "text-red-600"}>{value.toString()}</span>
+      return <span className={getValueColor(value)}>{value.toString()}</span>
     }
 
     if (typeof value === "string" || typeof value === "number") {
-      return <span>{value.toString()}</span>
+      return <span className={getValueColor(value)}>{value.toString()}</span>
     }
 
     if (Array.isArray(value)) {
@@ -91,6 +108,22 @@ function InfoRow({ label, value, className = "" }: InfoRowProps) {
     return <span>{String(value)}</span>
   }
 
+  if (displayAsRow) {
+    return (
+      <div
+        className={cn(
+          "flex items-center justify-between py-1.5 px-3 font-mono text-sm",
+          "hover:bg-gray-50 dark:hover:bg-gray-800/50",
+          "even:bg-gray-50/50 dark:even:bg-gray-800/25",
+          className,
+        )}
+      >
+        <div className="text-gray-600 dark:text-gray-400">{formattedLabel}</div>
+        <div className="text-right">{renderValue()}</div>
+      </div>
+    )
+  }
+
   return (
     <div className={className}>
       <div className="text-sm text-muted-foreground">{formattedLabel}</div>
@@ -104,6 +137,7 @@ interface ObjectInfoViewerProps {
   priorityFields?: string[]
   excludedFields?: string[]
   className?: string
+  displayAsRow?: boolean
 }
 
 export function ObjectInfoViewer({
@@ -111,12 +145,11 @@ export function ObjectInfoViewer({
   priorityFields = [],
   excludedFields = [],
   className = "",
+  displayAsRow = false,
 }: ObjectInfoViewerProps) {
-  // Filter and sort fields
   const getFieldEntries = () => {
     const entries = Object.entries(data).filter(([key]) => !excludedFields.includes(key))
 
-    // Sort entries to put priority fields first, then alphabetically
     return entries.sort(([keyA], [keyB]) => {
       const isPriorityA = priorityFields.includes(keyA)
       const isPriorityB = priorityFields.includes(keyB)
@@ -124,7 +157,6 @@ export function ObjectInfoViewer({
       if (isPriorityA && !isPriorityB) return -1
       if (!isPriorityA && isPriorityB) return 1
 
-      // Within the same group, sort alphabetically
       return keyA.localeCompare(keyB)
     })
   }
@@ -132,11 +164,17 @@ export function ObjectInfoViewer({
   const fieldEntries = getFieldEntries()
 
   return (
-    <div className={cn("grid gap-x-4 gap-y-6", fieldEntries.length > 0 ? "grid-cols-2" : "grid-cols-1", className)}>
+    <div
+      className={cn(
+        displayAsRow ? "border rounded-md divide-y divide-gray-100 dark:divide-gray-800" : "gap-x-4 gap-y-6 grid",
+        !displayAsRow && (fieldEntries.length > 0 ? "grid-cols-2" : "grid-cols-1"),
+        className,
+      )}
+    >
       {fieldEntries.length > 0 ? (
         <>
           {fieldEntries.map(([key, value]) => (
-            <InfoRow key={key} label={key} value={value} />
+            <InfoRow key={key} label={key} value={value} displayAsRow={displayAsRow} />
           ))}
         </>
       ) : (
