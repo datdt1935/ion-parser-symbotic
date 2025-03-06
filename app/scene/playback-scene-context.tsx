@@ -127,6 +127,47 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
     updateTransform()
   }, [updateTransform])
 
+  const focusCamera = useCallback(() => {
+    const { camera, model, controls } = sceneStateRef.current
+    if (!camera || !model) return
+
+    const box = new THREE.Box3().setFromObject(model)
+    const center = box.getCenter(new THREE.Vector3())
+    const size = box.getSize(new THREE.Vector3())
+
+    // Set controls target to model position if controls are enabled
+    if (controls?.enabled) {
+      controls.target.copy(model.position)
+    }
+
+    // Calculate camera position based on view mode
+    if (viewMode === "third-person") {
+      // Third-person camera setup - position directly behind the model
+      const distance = 5
+      const height = 2
+
+      // Get the backward direction vector (opposite of forward)
+      const backward = new THREE.Vector3(0, 0, 1)
+      backward.applyQuaternion(model.quaternion)
+
+      // Calculate offset from model position
+      const offset = backward.multiplyScalar(distance)
+      offset.y = height
+
+      // Set camera position behind the model
+      camera.position.copy(model.position).add(offset)
+    } else {
+      // Orbit camera setup - set to default position (0, 5, 10)
+      camera.position.set(0, 5, 10)
+    }
+
+    const lookAtPoint = model.position.clone()
+    lookAtPoint.y += 0.5
+    camera.lookAt(lookAtPoint)
+
+    camera.updateProjectionMatrix()
+  }, [viewMode])
+
   const initScene = useCallback(
     (container: HTMLDivElement) => {
       // Setup scene
@@ -263,8 +304,8 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
         object.position.sub(center)
 
         // Apply default transform
-        object.position.set(0.26805, 0, 1.70
-        object.quaternion.set(0, 0.46174857461019, 0, 0.8870108532850403)
+        //object.position.set(0.26805, 0, 1.70);
+        //object.quaternion.set(0, 0.46174857461019, 0, 0.8870108532850403)
 
         // Add default material if none exists
         object.traverse((child) => {
@@ -280,6 +321,18 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
         // Add model to scene
         scene.add(object)
         sceneStateRef.current.model = object
+
+        // Set controls target to model position if controls are enabled
+        if (sceneStateRef.current.controls?.enabled) {
+          sceneStateRef.current.controls.target.copy(object.position)
+        }
+
+        // Set default camera position and focus
+        if (sceneStateRef.current.camera) {
+          sceneStateRef.current.camera.position.set(0, 5, 10)
+          focusCamera()
+        }
+
         updateTransform()
       } catch (error) {
         console.error("Error loading model:", error)
@@ -287,7 +340,7 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
         URL.revokeObjectURL(url)
       }
     },
-    [updateTransform],
+    [focusCamera, updateTransform],
   )
 
   const moveForward = useCallback(
@@ -356,6 +409,12 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
     (x: number, y: number, z: number) => {
       if (!sceneStateRef.current.model) return
       sceneStateRef.current.model.position.set(x, y, z)
+
+      // Update controls target to follow model if controls are enabled
+      if (sceneStateRef.current.controls?.enabled) {
+        sceneStateRef.current.controls.target.copy(sceneStateRef.current.model.position)
+      }
+
       updateTransform()
     },
     [updateTransform],
@@ -379,40 +438,6 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
     [updateTransform],
   )
 
-  const focusCamera = useCallback(() => {
-    const { camera, model } = sceneStateRef.current
-    if (!camera || !model) return
-
-    const box = new THREE.Box3().setFromObject(model)
-    const center = box.getCenter(new THREE.Vector3())
-    const size = box.getSize(new THREE.Vector3())
-
-    // Calculate camera position based on view mode
-    if (viewMode === "third-person") {
-      // Third-person camera setup
-      const distance = 3
-      const height = 1.5
-      const direction = new THREE.Vector3(0, 0, -1)
-      direction.applyQuaternion(model.quaternion)
-      const offset = direction.multiplyScalar(-distance)
-      offset.y = height
-      camera.position.copy(model.position).add(offset)
-
-      const lookAtPoint = model.position.clone()
-      lookAtPoint.y += 0.5
-      camera.lookAt(lookAtPoint)
-    } else {
-      // Orbit camera setup
-      const maxDim = Math.max(size.x, size.y, size.z)
-      const fov = camera.fov * (Math.PI / 180)
-      const cameraZ = Math.abs(maxDim / Math.sin(fov / 2))
-      camera.position.set(0, 0, cameraZ * 1.5)
-      camera.lookAt(center)
-    }
-
-    camera.updateProjectionMatrix()
-  }, [viewMode])
-
   useEffect(() => {
     return () => {
       disposeScene()
@@ -422,7 +447,7 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
   useEffect(() => {
     if (!sceneStateRef.current.camera || !sceneStateRef.current.model) return
 
-    const { controls } = sceneStateRef.current
+    const { controls, model } = sceneStateRef.current
 
     if (viewMode === "third-person") {
       // Disable OrbitControls in third-person mode
@@ -438,15 +463,19 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
         if (!sceneStateRef.current.model || !sceneStateRef.current.camera) return
 
         const { model, camera } = sceneStateRef.current
-        const distance = 3
-        const height = 1.5
+        const distance = 5
+        const height = 2
 
-        const direction = new THREE.Vector3(0, 0, -1)
-        direction.applyQuaternion(model.quaternion)
-        const offset = direction.multiplyScalar(-distance)
+        // Get the backward direction vector (opposite of forward)
+        const backward = new THREE.Vector3(0, 0, 1)
+        backward.applyQuaternion(model.quaternion)
+
+        // Calculate offset from model position
+        const offset = backward.multiplyScalar(distance)
         offset.y = height
-        const targetPosition = model.position.clone().add(offset)
-        camera.position.copy(targetPosition)
+
+        // Set camera position behind the model
+        camera.position.copy(model.position).add(offset)
 
         const lookAtPoint = model.position.clone()
         lookAtPoint.y += 0.5
@@ -459,6 +488,8 @@ export function PlaybackSceneProvider({ children }: PlaybackSceneProviderProps) 
       // Re-enable OrbitControls in orbit mode
       if (controls) {
         controls.enabled = true
+        // Set controls target to model position
+        controls.target.copy(model.position)
       }
 
       // Focus camera once when switching to orbit mode

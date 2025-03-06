@@ -2,7 +2,8 @@
 
 import { PlaybackControls } from "@/components/playback-controls"
 import { Playback3DViewer } from "@/components/playback-3d-viewer"
-import { OhmniCleanViewer } from "@/components/ohmni-clean-viewer"
+import { CameraFeedViewer } from "@/components/camera-feed-viewer"
+import { MonitorPanel } from "./monitor-panel"
 
 export function MainContent() {
   return (
@@ -16,7 +17,7 @@ export function MainContent() {
       <div className="rounded-lg border bg-card">
         <div className="p-4">
           <h2 className="text-lg font-semibold mb-4">Camera Feed</h2>
-          <OhmniCleanViewer />
+          <CameraFeedViewer />
         </div>
       </div>
 
@@ -29,6 +30,9 @@ export function MainContent() {
           </div>
         </div>
       </div>
+
+      {/* Monitor Panel (formerly Log Viewer) */}
+      <MonitorPanel />
     </div>
   )
 }

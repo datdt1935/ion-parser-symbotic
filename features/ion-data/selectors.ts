@@ -95,6 +95,72 @@ const selectRosoutMessages = createSelector(selectTopics, (topics) => {
   return rosoutTopic.messages || []
 })
 
+const selectWheelOdomMessages = createSelector(selectTopics, (topics) => {
+  const wheelOdomTopic = topics.find((t) => t.topicName === "/tb_control/wheel_odom")
+  if (!wheelOdomTopic) return []
+  return wheelOdomTopic.messages || []
+})
+
+// Selector to get the current wheel odometry message based on playback time
+const selectCurrentWheelOdomMessage = createSelector(
+  [selectWheelOdomMessages, selectPlayback],
+  (messages, playback) => {
+    if (!messages.length || playback.logStartTime === null) return null
+
+    // Find the message with timestamp closest to current playback time
+    const targetTime = playback.logStartTime + playback.currentTime
+
+    // Binary search would be more efficient for large logs
+    let closestIndex = 0
+    let closestDiff = Number.MAX_SAFE_INTEGER
+
+    messages.forEach((msg, index) => {
+      if (msg.timestamp) {
+        const diff = Math.abs(msg.timestamp - targetTime)
+        if (diff < closestDiff) {
+          closestDiff = diff
+          closestIndex = index
+        }
+      }
+    })
+
+    return messages[closestIndex] || null
+  },
+)
+
+// Helper selector to get the current wheel odometry transform
+const selectCurrentWheelOdomTransform = createSelector([selectCurrentWheelOdomMessage], (message) => {
+  if (!message?.data?.pose?.pose) return null
+
+  const { position, orientation } = message.data.pose.pose
+  return {
+    position: position
+      ? {
+          x: position.x,
+          y: position.z, // Map Z to Y
+          z: position.y, // Map Y to Z
+        }
+      : null,
+    orientation: orientation
+      ? {
+          x: orientation.x,
+          y: orientation.z, // Map Z to Y
+          z: orientation.y, // Map Y to Z
+          w: orientation.w,
+        }
+      : null,
+    timestamp: message.timestamp,
+    frameId: message.data.header?.frame_id,
+    childFrameId: message.data.child_frame_id,
+  }
+})
+
+const selectCameraImageMessages = createSelector(selectTopics, (topics) => {
+  const cameraTopic = topics.find((t) => t.topicName === "/usb_cam/image_raw/compressed_throttle")
+  if (!cameraTopic) return []
+  return cameraTopic.messages || []
+})
+
 const selectSessionInfo = createSelector(
   (state: RootState) => state.ionData.data?.raw,
   (raw) => {
@@ -143,6 +209,10 @@ export const selectors = {
   selectSelectedTopic,
   selectPlayback,
   selectRosoutMessages,
+  selectWheelOdomMessages,
+  selectCurrentWheelOdomMessage,
+  selectCurrentWheelOdomTransform,
+  selectCameraImageMessages,
   selectBotModelInfo,
   selectAvailableImageTopic,
   selectLogDuration,

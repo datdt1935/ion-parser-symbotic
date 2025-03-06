@@ -2,13 +2,14 @@
 
 import { useCallback } from "react"
 import { useDropzone } from "react-dropzone"
-import { Cloud, Loader2 } from "lucide-react"
+import { Cloud, Loader2, Upload, FileJson } from "lucide-react"
 import { useDispatch, useSelector } from "@/store/store"
 import { ionDataActions, ionDataSelectors } from "@/features/ion-data" // Import from index
 import { IonParser } from "../ion-parser"
 import { cn } from "@/lib/utils"
 import { Sidebar } from "./components/sidebar"
 import { MainContent } from "./components/main-content"
+import { Button } from "@/components/ui/button"
 
 export default function NewIonLogViewer() {
   const dispatch = useDispatch()
@@ -70,12 +71,41 @@ export default function NewIonLogViewer() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header with upload button when data is loaded */}
+      {ionData && (
+        <header className="border-b bg-background sticky top-0 z-10">
+          <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <FileJson className="h-6 w-6" />
+              <h1 className="text-lg font-semibold">ION Log Viewer</h1>
+            </div>
+            <div {...getRootProps()}>
+              <input {...getInputProps()} />
+              <Button variant="outline" className="ml-auto" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Parsing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import ION File
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* Full-size drag & drop area when no data is loaded */}
       {!ionData && (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 flex items-center justify-center" style={{ height: "50vh" }}>
           <div
             {...getRootProps()}
             className={cn(
-              "border-2 border-dashed rounded-lg p-12 text-center transition-colors",
+              "border-2 border-dashed rounded-lg p-12 text-center transition-colors w-full h-full flex flex-col items-center justify-center",
               isDragActive ? "border-primary bg-primary/5" : "border-muted",
             )}
           >

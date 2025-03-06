@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RosoutAggViewer } from "@/components/rosout-agg-viewer"
 import { BotModelInfo } from "./bot-model-info"
 import { Playback3DViewer } from "@/components/playback-3d-viewer"
-import { OhmniCleanViewer } from "@/components/ohmni-clean-viewer"
+import { CameraFeedViewer } from "@/components/camera-feed-viewer"
 
 export default function IonLogViewer() {
   const dispatch = useDispatch()
@@ -145,7 +145,7 @@ export default function IonLogViewer() {
               <TabsTrigger value="topics">Topics</TabsTrigger>
               <TabsTrigger value="rosout">Rosout</TabsTrigger>
               <TabsTrigger value="3d">Playback 3D</TabsTrigger>
-              {availableImageTopic && <TabsTrigger value="ohmni">OhmniClean log</TabsTrigger>}
+              {availableImageTopic && <TabsTrigger value="ohmni">Camera Feed</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="info" className="space-y-4">
@@ -182,7 +182,7 @@ export default function IonLogViewer() {
 
             {availableImageTopic && (
               <TabsContent value="ohmni">
-                <OhmniCleanViewer />
+                <CameraFeedViewer />
               </TabsContent>
             )}
           </Tabs>
