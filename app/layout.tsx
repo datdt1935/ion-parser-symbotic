@@ -5,8 +5,8 @@ import type { Metadata } from "next"
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: "ION Parser",
-  description: "Parse and view ION log files",
+  title: "ION Log Viewer",
+  description: "Parse and view ION log files with the new UI layout",
 }
 
 export default function RootLayout({
