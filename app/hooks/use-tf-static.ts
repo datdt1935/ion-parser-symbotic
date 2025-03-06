@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSelector } from "@/store/store"
-import { ionDataSelectors } from "@/features/ion-data/slice"
+import { ionDataSelectors } from "@/features/ion-data"
 
 interface Transform {
   translation?: {

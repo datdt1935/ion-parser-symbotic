@@ -1,21 +1,15 @@
 "use client"
 
-import type React from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Upload, Loader2, FileJson } from "lucide-react"
-import { SessionInfo } from "./session-info"
-import { RobotInfo } from "./robot-info"
-import { TopicViewer } from "@/components/topic-viewer"
-import { IonParser } from "./ion-parser"
-import { JsonViewer } from "@/components/json-viewer"
+import { useCallback } from "react"
+import { useDropzone } from "react-dropzone"
+import { Cloud, Loader2, Upload, FileJson } from "lucide-react"
 import { useDispatch, useSelector } from "@/store/store"
-import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { RosoutAggViewer } from "@/components/rosout-agg-viewer"
-import { BotModelInfo } from "./bot-model-info"
-import { Playback3DViewer } from "@/components/playback-3d-viewer"
-import { OhmniCleanViewer } from "@/components/ohmni-clean-viewer"
+import { ionDataActions, ionDataSelectors } from "@/features/ion-data" // Import from index
+import { IonParser } from "./ion-parser"
+import { cn } from "@/lib/utils"
+import { Sidebar } from "./components/sidebar"
+import { MainContent } from "./components/main-content"
+import { Button } from "@/components/ui/button"
 
 export default function IonLogViewer() {
   const dispatch = useDispatch()
@@ -23,163 +17,126 @@ export default function IonLogViewer() {
   const isLoading = useSelector(ionDataSelectors.selectIsLoading)
   const error = useSelector(ionDataSelectors.selectError)
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) {
-      dispatch(ionDataActions.setError({ error: "No file selected" }))
-      return
-    }
-
-    dispatch(ionDataActions.pushLoading())
-    dispatch(ionDataActions.setError({ error: "" }))
-
-    try {
-      if (file.size === 0) {
-        throw new Error("The selected file is empty")
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0]
+      if (!file) {
+        dispatch(ionDataActions.setError({ error: "No file selected" }))
+        return
       }
 
-      const buffer = await file.arrayBuffer()
+      dispatch(ionDataActions.pushLoading())
+      dispatch(ionDataActions.setError({ error: "" }))
 
-      if (buffer.byteLength === 0) {
-        throw new Error("File content is empty")
+      try {
+        if (file.size === 0) {
+          throw new Error("The selected file is empty")
+        }
+
+        const buffer = await file.arrayBuffer()
+
+        if (buffer.byteLength === 0) {
+          throw new Error("File content is empty")
+        }
+
+        const parsedData = await IonParser.parse(buffer)
+
+        if (!parsedData.raw.length) {
+          throw new Error("No valid data found in the file")
+        }
+
+        dispatch(ionDataActions.setData({ data: parsedData }))
+      } catch (err) {
+        console.error("File processing error:", err)
+        dispatch(
+          ionDataActions.setError({
+            error: err instanceof Error ? err.message : "Failed to process the file",
+          }),
+        )
+      } finally {
+        dispatch(ionDataActions.popLoading())
       }
+    },
+    [dispatch],
+  )
 
-      const parsedData = await IonParser.parse(buffer)
-
-      if (!parsedData.raw.length) {
-        throw new Error("No valid data found in the file")
-      }
-
-      dispatch(ionDataActions.setData({ data: parsedData }))
-    } catch (err) {
-      console.error("File processing error:", err)
-      dispatch(
-        ionDataActions.setError({
-          error: err instanceof Error ? err.message : "Failed to process the file",
-        }),
-      )
-    } finally {
-      dispatch(ionDataActions.popLoading())
-    }
-  }
-
-  const availableImageTopic = useSelector(ionDataSelectors.selectAvailableImageTopic)
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "application/ion": [".ion"],
+      "application/octet-stream": [".ion"],
+    },
+    multiple: false,
+  })
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top Menu Bar */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <FileJson className="h-6 w-6" />
-            <h1 className="text-lg font-semibold">ION Log Viewer</h1>
-          </div>
-          <Button variant="outline" className="ml-auto" disabled={isLoading}>
-            <label className="cursor-pointer flex items-center">
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Parsing...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import ION File
-                </>
-              )}
-              <input type="file" className="hidden" accept=".ion" onChange={handleFileUpload} disabled={isLoading} />
-            </label>
-          </Button>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-6">
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-md">{error}</div>
-        )}
-
-        {!ionData && !error && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <Upload className="h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No File Loaded</h3>
-              <p className="text-sm text-muted-foreground mb-4">Upload an ION log file to view its contents</p>
-              <Button variant="outline" disabled={isLoading}>
-                <label className="cursor-pointer flex items-center">
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Parsing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Select File
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".ion"
-                    onChange={handleFileUpload}
-                    disabled={isLoading}
-                  />
-                </label>
+      {/* Header with upload button when data is loaded */}
+      {ionData && (
+        <header className="border-b bg-background sticky top-0 z-10">
+          <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <FileJson className="h-6 w-6" />
+              <h1 className="text-lg font-semibold">ION Log Viewer</h1>
+            </div>
+            <div {...getRootProps()}>
+              <input {...getInputProps()} />
+              <Button variant="outline" className="ml-auto" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Parsing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import ION File
+                  </>
+                )}
               </Button>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </div>
+        </header>
+      )}
 
-        {ionData && ionData.raw.length > 0 && (
-          <Tabs defaultValue="info" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="info">Information</TabsTrigger>
-              <TabsTrigger value="topics">Topics</TabsTrigger>
-              <TabsTrigger value="rosout">Rosout</TabsTrigger>
-              <TabsTrigger value="3d">Playback 3D</TabsTrigger>
-              {availableImageTopic && <TabsTrigger value="ohmni">OhmniClean log</TabsTrigger>}
-            </TabsList>
-
-            <TabsContent value="info" className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <SessionInfo data={ionData.raw} />
-                <RobotInfo data={ionData.raw} />
-              </div>
-
-              <BotModelInfo data={ionData.raw} />
-
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="text-lg font-semibold mb-4">Raw ION Data Preview</h3>
-                  <JsonViewer
-                    data={ionData.raw}
-                    defaultViewMode="tree"
-                    showViewModeToggle={false} // Disable view mode toggle
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="topics">
-              <TopicViewer />
-            </TabsContent>
-
-            <TabsContent value="rosout">
-              <RosoutAggViewer />
-            </TabsContent>
-
-            <TabsContent value="3d">
-              <Playback3DViewer />
-            </TabsContent>
-
-            {availableImageTopic && (
-              <TabsContent value="ohmni">
-                <OhmniCleanViewer />
-              </TabsContent>
+      {/* Full-size drag & drop area when no data is loaded */}
+      {!ionData && (
+        <div className="container mx-auto px-4 flex items-center justify-center" style={{ height: "50vh" }}>
+          <div
+            {...getRootProps()}
+            className={cn(
+              "border-2 border-dashed rounded-lg p-12 text-center transition-colors w-full h-full flex flex-col items-center justify-center",
+              isDragActive ? "border-primary bg-primary/5" : "border-muted",
             )}
-          </Tabs>
-        )}
-      </main>
+          >
+            <input {...getInputProps()} />
+            <div className="flex flex-col items-center gap-2">
+              <Cloud className="h-12 w-12 text-muted-foreground" />
+              <h3 className="text-lg font-semibold">Drag & drop an Ion file here</h3>
+              <p className="text-sm text-muted-foreground">or click to select a file</p>
+              {isLoading && <Loader2 className="h-6 w-6 animate-spin text-primary mt-2" />}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="container mx-auto px-4 py-4">
+          <div className="p-4 bg-destructive/10 text-destructive rounded-md">{error}</div>
+        </div>
+      )}
+
+      {ionData && (
+        <div className="container mx-auto p-4">
+          <div className="grid grid-cols-1 md:grid-cols-[400px_1fr] gap-4">
+            {/* Left Sidebar */}
+            <Sidebar />
+
+            {/* Main Content */}
+            <MainContent />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

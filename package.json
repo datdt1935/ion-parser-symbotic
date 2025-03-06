@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-separator": "^1.1.2",
@@ -26,6 +27,7 @@
     "pako": "^2.1.0",
     "react": "^18",
     "react-dom": "^18",
+    "react-dropzone": "^14.3.8",
     "react-redux": "^9.2.0",
     "redux": "^5.0.1",
     "tailwind-merge": "^3.0.2",

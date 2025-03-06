@@ -4,25 +4,23 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { JsonViewer } from "./json-viewer"
 import { useDispatch, useSelector } from "@/store/store"
-import { ionDataActions, ionDataSelectors } from "@/features/ion-data/slice"
-import { Slider } from "@/components/ui/slider"
+import { ionDataActions, ionDataSelectors } from "@/features/ion-data" // Import from index
 import { Button } from "@/components/ui/button"
-import { Play, Pause, Clock, FileJson, Loader2 } from "lucide-react"
-import type { RootState } from "@/store/store"
+import { Clock, FileJson, Loader2 } from "lucide-react"
+import { PlaybackControls } from "./playback-controls"
 
 type ViewMode = "timeline" | "full"
 
 export function RosoutAggViewer() {
-  const [viewMode, setViewMode] = useState<ViewMode>("full")
+  const [viewMode, setViewMode] = useState<ViewMode>("timeline")
   const [isChangingView, setIsChangingView] = useState(false)
   const dispatch = useDispatch()
   const topicNames = useSelector(ionDataSelectors.selectTopicNames)
   const selectedTopic = useSelector(ionDataSelectors.selectSelectedTopic)
-  const currentMessage = useSelector(ionDataSelectors.selectCurrentTopicMessage)
-  const currentMessageIndex = useSelector((state: RootState) => state.ionData.currentMessageIndex)
   const allMessages = useSelector(ionDataSelectors.selectCurrentTopicAllMessages)
   const totalMessages = useSelector(ionDataSelectors.selectTotalMessages)
-  const playbackState = useSelector(ionDataSelectors.selectPlaybackState)
+  const playback = useSelector(ionDataSelectors.selectPlayback)
+  const currentMessageIndex = useSelector(ionDataSelectors.selectCurrentMessageIndexByTime)
 
   // Set default topic to rosout_agg when component mounts or when topics change
   useEffect(() => {
@@ -33,18 +31,21 @@ export function RosoutAggViewer() {
 
   // Stop playback when switching to full view
   useEffect(() => {
-    if (viewMode === "full" && playbackState.isPlaying) {
-      dispatch(ionDataActions.setPlaybackState({ isPlaying: false }))
+    if (viewMode === "full" && playback.isPlaying) {
+      dispatch(ionDataActions.pausePlayback())
     }
-  }, [viewMode, playbackState.isPlaying, dispatch])
+  }, [viewMode, playback.isPlaying, dispatch])
 
-  const handleSliderChange = (value: number[]) => {
-    dispatch(ionDataActions.setCurrentMessageIndex(value[0]))
-  }
+  // Update playback time at regular intervals
+  useEffect(() => {
+    if (!playback.isPlaying) return
 
-  const togglePlayback = () => {
-    dispatch(ionDataActions.setPlaybackState({ isPlaying: !playbackState.isPlaying }))
-  }
+    const intervalId = setInterval(() => {
+      dispatch(ionDataActions.updatePlaybackTime())
+    }, 16) // ~60fps
+
+    return () => clearInterval(intervalId)
+  }, [playback.isPlaying, dispatch])
 
   const toggleViewMode = () => {
     setIsChangingView(true)
@@ -54,17 +55,6 @@ export function RosoutAggViewer() {
       setIsChangingView(false)
     }, 300)
   }
-
-  // Playback effect
-  useEffect(() => {
-    if (!playbackState.isPlaying || !allMessages.length || viewMode === "full") return
-
-    const interval = setInterval(() => {
-      dispatch(ionDataActions.setCurrentMessageIndex((currentMessageIndex + 1) % allMessages.length))
-    }, 1000 / playbackState.speed)
-
-    return () => clearInterval(interval)
-  }, [playbackState.isPlaying, playbackState.speed, currentMessageIndex, allMessages.length, dispatch, viewMode])
 
   if (topicNames.length === 0) {
     return (
@@ -119,26 +109,8 @@ export function RosoutAggViewer() {
             )}
             {viewMode === "timeline" ? (
               <>
-                <div className="flex items-center justify-end mb-4">
-                  <div className="text-sm text-muted-foreground">
-                    Message {currentMessageIndex + 1} of {totalMessages}
-                  </div>
-                </div>
-
-                <div className="mb-6 space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" onClick={togglePlayback} className="w-10 h-10">
-                      {playbackState.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    </Button>
-                    <div className="flex-1">
-                      <Slider
-                        value={[currentMessageIndex]}
-                        max={Math.max(0, totalMessages - 1)}
-                        step={1}
-                        onValueChange={handleSliderChange}
-                      />
-                    </div>
-                  </div>
+                <div className="mb-6">
+                  <PlaybackControls />
                 </div>
 
                 <JsonViewer data={allMessages[currentMessageIndex] || {}} isExpanded={true} enableSearch={true} />

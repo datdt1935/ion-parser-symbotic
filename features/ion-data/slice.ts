@@ -1,6 +1,5 @@
-import { createSlice, type PayloadAction, createSelector } from "@reduxjs/toolkit"
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
 import type { ParsedIonData } from "@/app/types"
-import type { RootState } from "@/store/reducer"
 import type { TopicMessage } from "./types"
 
 // Types
@@ -14,11 +13,17 @@ export interface IonDataState {
   }
   selectedTopic: string | null
   currentMessageIndex: number
+  // Timestamp-based playback state
   playback: {
     isPlaying: boolean
-    speed: number // messages per second
+    speed: number // playback speed multiplier
+    currentTime: number // current playback time in milliseconds
+    startTime: number | null // timestamp when playback started
+    startOffset: number // offset from the beginning of the log
+    logStartTime: number | null // timestamp of the first message
+    logEndTime: number | null // timestamp of the last message
   }
-  availableImageTopic: string | null // Add this line
+  availableImageTopic: string | null
 }
 
 interface SetDataPayload {
@@ -42,9 +47,14 @@ export const initialState: IonDataState = {
   currentMessageIndex: 0,
   playback: {
     isPlaying: false,
-    speed: 1, // Default speed: 1 message per second
+    speed: 1, // Default speed: 1x
+    currentTime: 0,
+    startTime: null,
+    startOffset: 0,
+    logStartTime: null,
+    logEndTime: null,
   },
-  availableImageTopic: null, // Add this line
+  availableImageTopic: null,
 }
 
 // Helper function to extract topics from raw data
@@ -70,49 +80,38 @@ const extractTopics = (rawData: any[]): TopicMessage[] => {
   return topics
 }
 
-// Base selectors
-const selectIonData = (state: RootState) => state.ionData.data
-const selectRawData = (state: RootState) => state.ionData.data?.raw
-const selectIsLoading = (state: RootState) => state.ionData.isLoading > 0
-const selectError = (state: RootState) => state.ionData.error
-const selectFilters = (state: RootState) => state.ionData.filters
-const selectSelectedTopic = (state: RootState) => state.ionData.selectedTopic
-const selectAvailableImageTopic = (state: RootState) => state.ionData.availableImageTopic
+// Helper function to find log start and end times
+const findLogTimeRange = (rawData: any[]): { startTime: number | null; endTime: number | null } => {
+  let startTime: number | null = null
+  let endTime: number | null = null
 
-// Derived selectors
-const selectTopics = createSelector(selectRawData, (raw) => (raw ? extractTopics(raw) : []))
+  // Flatten all messages from all topics
+  const allMessages: { timestamp: number }[] = []
 
-const selectTopicNames = createSelector(selectTopics, (topics) => [...new Set(topics.map((t) => t.topicName))])
+  rawData.forEach((item) => {
+    if (item?.topics && Array.isArray(item.topics)) {
+      item.topics.forEach((topic: any) => {
+        if (Array.isArray(topic.messages)) {
+          topic.messages.forEach((msg: any) => {
+            if (msg.timestamp) {
+              allMessages.push({ timestamp: msg.timestamp })
+            }
+          })
+        }
+      })
+    }
+  })
 
-const selectCurrentTopicMessage = createSelector([selectTopics, selectSelectedTopic], (topics, selectedTopic) => {
-  if (!selectedTopic) return null
+  // Sort messages by timestamp
+  allMessages.sort((a, b) => a.timestamp - b.timestamp)
 
-  const topicMessages = topics.filter((t) => t.topicName === selectedTopic)
-  if (!topicMessages.length) return null
+  if (allMessages.length > 0) {
+    startTime = allMessages[0].timestamp
+    endTime = allMessages[allMessages.length - 1].timestamp
+  }
 
-  return topicMessages[0]
-})
-
-const selectCurrentTopicAllMessages = createSelector(
-  [selectCurrentTopicMessage],
-  (currentTopic) => currentTopic?.messages || [],
-)
-
-const selectTotalMessages = createSelector([selectCurrentTopicAllMessages], (messages) => messages.length)
-
-// Add playback selectors
-const selectPlaybackState = (state: RootState) => state.ionData.playback
-
-const selectRosoutMessages = createSelector(selectTopics, (topics) => {
-  const rosoutTopic = topics.find((t) => t.topicName === "/rosout_agg")
-  if (!rosoutTopic) return []
-  return rosoutTopic.messages || []
-})
-
-const selectBotModelInfo = createSelector(selectRawData, (raw) => {
-  if (!raw) return null
-  return raw.find((item) => item?.metadata?.botModel)?.metadata?.botModel || null
-})
+  return { startTime, endTime }
+}
 
 // Slice
 const ionDataSlice = createSlice({
@@ -131,6 +130,15 @@ const ionDataSlice = createSlice({
       state.selectedTopic = null
       state.currentMessageIndex = 0
 
+      // Initialize playback time range
+      const { startTime, endTime } = findLogTimeRange(action.payload.data.raw || [])
+      state.playback.logStartTime = startTime
+      state.playback.logEndTime = endTime
+      state.playback.currentTime = 0
+      state.playback.startOffset = 0
+      state.playback.startTime = null
+      state.playback.isPlaying = false
+
       // Check for available image topic when data is loaded
       const topics = extractTopics(action.payload.data.raw || [])
       state.availableImageTopic =
@@ -147,7 +155,7 @@ const ionDataSlice = createSlice({
     clearData(state) {
       return {
         ...initialState,
-        availableImageTopic: null, // Make sure to clear this too
+        availableImageTopic: null,
       }
     },
     setSelectedTopic(state, action: PayloadAction<string | null>) {
@@ -157,32 +165,62 @@ const ionDataSlice = createSlice({
     setCurrentMessageIndex(state, action: PayloadAction<number>) {
       state.currentMessageIndex = action.payload
     },
-    setPlaybackState(state, action: PayloadAction<{ isPlaying: boolean }>) {
-      state.playback.isPlaying = action.payload.isPlaying
+    // Playback actions
+    startPlayback(state) {
+      state.playback.isPlaying = true
+      state.playback.startTime = Date.now()
+    },
+    pausePlayback(state) {
+      if (state.playback.isPlaying) {
+        state.playback.isPlaying = false
+        // Save current position as offset for next play
+        if (state.playback.startTime !== null) {
+          const elapsed = (Date.now() - state.playback.startTime) * state.playback.speed
+          state.playback.startOffset = state.playback.startOffset + elapsed
+        }
+        state.playback.startTime = null
+      }
     },
     setPlaybackSpeed(state, action: PayloadAction<number>) {
+      // When changing speed during playback, we need to adjust the offset and restart
+      if (state.playback.isPlaying && state.playback.startTime !== null) {
+        const elapsed = (Date.now() - state.playback.startTime) * state.playback.speed
+        state.playback.startOffset = state.playback.startOffset + elapsed
+        state.playback.startTime = Date.now()
+      }
       state.playback.speed = action.payload
+    },
+    updatePlaybackTime(state) {
+      if (state.playback.isPlaying && state.playback.startTime !== null) {
+        const elapsed = (Date.now() - state.playback.startTime) * state.playback.speed
+        state.playback.currentTime = state.playback.startOffset + elapsed
+
+        // Loop playback if we reach the end
+        if (
+          state.playback.logEndTime !== null &&
+          state.playback.logStartTime !== null &&
+          state.playback.currentTime > state.playback.logEndTime - state.playback.logStartTime
+        ) {
+          state.playback.startOffset = 0
+          state.playback.startTime = Date.now()
+          state.playback.currentTime = 0
+        }
+      }
+    },
+    seekPlayback(state, action: PayloadAction<number>) {
+      // Seek to a specific percentage of the log duration
+      if (state.playback.logStartTime !== null && state.playback.logEndTime !== null) {
+        const duration = state.playback.logEndTime - state.playback.logStartTime
+        state.playback.currentTime = duration * action.payload
+        state.playback.startOffset = state.playback.currentTime
+
+        if (state.playback.isPlaying) {
+          state.playback.startTime = Date.now()
+        }
+      }
     },
   },
 })
-
-// Export selectors
-export const ionDataSelectors = {
-  selectIonData,
-  selectIsLoading,
-  selectError,
-  selectFilters,
-  selectTopics,
-  selectTopicNames,
-  selectCurrentTopicMessage,
-  selectCurrentTopicAllMessages,
-  selectTotalMessages,
-  selectSelectedTopic,
-  selectPlaybackState,
-  selectRosoutMessages,
-  selectBotModelInfo,
-  selectAvailableImageTopic,
-}
 
 export const ionDataActions = ionDataSlice.actions
 export const ionDataReducer = ionDataSlice.reducer
